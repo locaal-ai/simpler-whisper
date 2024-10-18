@@ -6,8 +6,9 @@ namespace py = pybind11;
 
 class WhisperModel {
 public:
-    WhisperModel(const std::string& model_path) {
+    WhisperModel(const std::string& model_path, bool use_gpu = false) {
         whisper_context_params ctx_params = whisper_context_default_params();
+        ctx_params.use_gpu = use_gpu;
         ctx = whisper_init_from_file_with_params(model_path.c_str(), ctx_params);
         if (!ctx) {
             throw std::runtime_error("Failed to initialize whisper context");
@@ -48,6 +49,6 @@ private:
 
 PYBIND11_MODULE(_whisper_cpp, m) {
     py::class_<WhisperModel>(m, "WhisperModel")
-        .def(py::init<const std::string&>())
+        .def(py::init<const std::string&, bool>())
         .def("transcribe", &WhisperModel::transcribe);
 }

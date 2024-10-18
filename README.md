@@ -2,7 +2,14 @@
 
 ![Build and Test](https://img.shields.io/github/actions/workflow/status/locaal-ai/simpler-whisper/build.yaml)
 
-A simple Python wrapper for whisper.cpp, providing an easy-to-use interface for speech recognition using the Whisper model. This package uses a CMake-based build process to create a Python extension that interfaces with the whisper.cpp library, supporting static libraries on Mac and Linux, and dynamic libraries on Windows.
+A zero-dependency simple Python wrapper for [whisper.cpp](https://github.com/ggerganov/whisper.cpp), providing an easy-to-use interface for speech recognition using the Whisper model. 
+
+Why is it better than [faster-whisper](https://github.com/SYSTRAN/faster-whisper) and [pywhispercpp](https://github.com/abdeladim-s/pywhispercpp):
+- Zero-dependency: Everything is shipped with the built wheel, no Python dependency on `av` or `ctranslate2` etc.
+- Dead simple API: call `.transcribe()` and get a result
+- Acceleration enabled: supports whatever whisper.cpp supports
+- Updated: using precompiled whisper.cpp from https://github.com/locaal-ai/occ-ai-dep-whispercpp
+- Build time: builds in 2 minutes because it's using a precompiled binary
 
 ## Installation
 
@@ -38,7 +45,7 @@ print(transcription)
 ## Platform-specific notes
 
 - On Windows, the package uses a DLL (whisper.dll), which is included in the package.
-- On Mac and Linux, the package uses a static library (libwhisper.a), which is linked into the extension.
+- On Mac and Linux, the package uses static libraries that are linked into the extension.
 
 ## Building from source
 

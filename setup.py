@@ -29,12 +29,8 @@ class CMakeBuild(build_ext):
         acceleration = os.environ.get('SIMPLER_WHISPER_ACCELERATION', 'cpu')
         target_platform = os.environ.get('SIMPLER_WHISPER_PLATFORM', platform.machine())
         
-        import numpy
-        numpy_include = numpy.get_include()
-        
         cmake_args = [
             f'-DCMAKE_LIBRARY_OUTPUT_DIRECTORY={extdir}',
-            f'-DNUMPY_INCLUDE_DIR={numpy_include}',
             f'-DACCELERATION={acceleration}',
         ]
 
@@ -64,7 +60,6 @@ class CMakeBuild(build_ext):
         
         print("CMake args:", cmake_args)
         print("Build args:", build_args)
-        print("NumPy include:", numpy_include)
         
         subprocess.check_call(['cmake', ext.sourcedir] + cmake_args, cwd=self.build_temp, env=env)
         subprocess.check_call(['cmake', '--build', '.'] + build_args, cwd=self.build_temp)

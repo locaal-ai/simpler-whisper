@@ -2,8 +2,8 @@ import numpy as np
 from . import _whisper_cpp
 
 class WhisperModel:
-    def __init__(self, model_path):
-        self.model = _whisper_cpp.WhisperModel(model_path)
+    def __init__(self, model_path, use_gpu=False):
+        self.model = _whisper_cpp.WhisperModel(model_path, use_gpu)
 
     def transcribe(self, audio):
         # Ensure audio is a numpy array of float32
