@@ -39,10 +39,10 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
 
     - name: Set up Python
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v5
       with:
         python-version: '3.9'
 
@@ -63,7 +63,7 @@ jobs:
         python -c "import simpler_whisper; print(simpler_whisper.__file__)"
 
     - name: Upload wheel
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v4
       with:
         name: wheel-${{ matrix.os }}-${{ matrix.platform }}-${{ matrix.acceleration }}
         path: dist/*.whl
