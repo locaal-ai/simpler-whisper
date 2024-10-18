@@ -13,6 +13,16 @@ jobs:
       matrix:
         os: ['windows-latest', 'macos-latest', 'ubuntu-latest']
         python-version: ['3.9', '3.10', '3.11', '3.12']
+        platform: ['x86_64', 'arm64', 'win64']
+        exclude:
+          - os: windows-latest
+            platform: arm64
+          - os: windows-latest
+            platform: x86_64
+          - os: macos-latest
+            platform: win64
+          - os: ubuntu-latest
+            platform: win64
         include:
           # Windows builds
           - os: windows-latest
