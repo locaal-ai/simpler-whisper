@@ -1,0 +1,3 @@
+include simpler_whisper/Release/*.dll
+include simpler_whisper/Release/*.pyd
+recursive-include simpler_whisper *.py
