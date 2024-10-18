@@ -34,4 +34,4 @@ dependencies = [
 packages = ["simpler_whisper"]
 
 [tool.setuptools.package-data]
-simpler_whisper = ["*.dll", "*.pyd"]
+simpler_whisper = ["*.dll", "*.pyd", "*.so"]
