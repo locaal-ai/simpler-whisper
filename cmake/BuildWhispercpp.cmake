@@ -115,7 +115,7 @@ else()
   else()
     set(Whispercpp_BUILD_TYPE Debug)
   endif()
-  set(Whispercpp_Build_GIT_TAG "v1.6.2")
+  set(Whispercpp_Build_GIT_TAG "v1.7.1")
   set(WHISPER_EXTRA_CXX_FLAGS "-fPIC")
   set(WHISPER_ADDITIONAL_CMAKE_ARGS -DWHISPER_BLAS=OFF -DWHISPER_CUBLAS=OFF -DWHISPER_OPENBLAS=OFF)
 
