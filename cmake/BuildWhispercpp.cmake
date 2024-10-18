@@ -145,12 +145,12 @@ else()
   set_target_properties(
     Whispercpp::Whisper
     PROPERTIES IMPORTED_LOCATION
-               ${INSTALL_DIR}/lib/static/${CMAKE_STATIC_LIBRARY_PREFIX}whisper${CMAKE_STATIC_LIBRARY_SUFFIX})
+               ${INSTALL_DIR}/lib/${CMAKE_STATIC_LIBRARY_PREFIX}whisper${CMAKE_STATIC_LIBRARY_SUFFIX})
   add_library(Whispercpp::GGML STATIC IMPORTED)
   set_target_properties(
     Whispercpp::GGML
     PROPERTIES IMPORTED_LOCATION
-               ${INSTALL_DIR}/lib/static/${CMAKE_STATIC_LIBRARY_PREFIX}ggml${CMAKE_STATIC_LIBRARY_SUFFIX})
+               ${INSTALL_DIR}/lib/${CMAKE_STATIC_LIBRARY_PREFIX}ggml${CMAKE_STATIC_LIBRARY_SUFFIX})
   set_target_properties(Whispercpp::Whisper PROPERTIES INTERFACE_INCLUDE_DIRECTORIES ${INSTALL_DIR}/include)
 endif()
 
