@@ -51,13 +51,17 @@ jobs:
         python -m pip install --upgrade pip
         pip install numpy cmake wheel setuptools
 
-    - name: Install package
+    - name: Build wheel
       env:
         SIMPLER_WHISPER_ACCELERATION: ${{ matrix.acceleration }}
         SIMPLER_WHISPER_PLATFORM: ${{ matrix.platform }}
       run: |
-        pip install .
-
+        python -m build --wheel
+  
+    - name: Install built wheel
+      run: |
+        pip install dist/*.whl
+  
     - name: Test import
       run: |
         python -c "import simpler_whisper; print(simpler_whisper.__file__)"
