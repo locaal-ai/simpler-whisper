@@ -13,39 +13,30 @@ jobs:
       matrix:
         os: ['windows-latest', 'macos-latest', 'ubuntu-latest']
         python-version: ['3.9', '3.10', '3.11', '3.12']
-        platform: ['x86_64', 'arm64', 'win64']
-        acceleration: ['', 'cpu', 'cuda', 'hipblas', 'vulkan']
-        exclude:
+        include:
+          # Windows builds
           - os: windows-latest
-            platform: ['arm64', 'x86_64']
+            platform: win64
+            acceleration: cpu
+          - os: windows-latest
+            platform: win64
+            acceleration: cuda
+          - os: windows-latest
+            platform: win64
+            acceleration: hipblas
+          - os: windows-latest
+            platform: win64
+            acceleration: vulkan
+            
+          # macOS builds
           - os: macos-latest
-            platform: ['win64']
+            platform: x86_64
+          - os: macos-latest
+            platform: arm64
+            
+          # Linux build
           - os: ubuntu-latest
-            platform: ['win64', 'arm64']
-        # include:
-        #   # Windows builds
-        #   - os: windows-latest
-        #     platform: win64
-        #     acceleration: cpu
-        #   - os: windows-latest
-        #     platform: win64
-        #     acceleration: cuda
-        #   - os: windows-latest
-        #     platform: win64
-        #     acceleration: hipblas
-        #   - os: windows-latest
-        #     platform: win64
-        #     acceleration: vulkan
-            
-        #   # macOS builds
-        #   - os: macos-latest
-        #     platform: x86_64
-        #   - os: macos-latest
-        #     platform: arm64
-            
-        #   # Linux build
-        #   - os: ubuntu-latest
-        #     platform: x86_64
+            platform: x86_64
 
     runs-on: ${{ matrix.os }}
 
