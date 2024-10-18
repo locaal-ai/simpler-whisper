@@ -90,6 +90,15 @@ elseif(WIN32)
                ${whispercpp_fetch_SOURCE_DIR}/lib/${CMAKE_STATIC_LIBRARY_PREFIX}whisper${CMAKE_STATIC_LIBRARY_SUFFIX})
   set_target_properties(Whispercpp::Whisper PROPERTIES INTERFACE_INCLUDE_DIRECTORIES
                                                        ${whispercpp_fetch_SOURCE_DIR}/include)
+  add_library(Whispercpp::GGML SHARED IMPORTED)
+  set_target_properties(
+    Whispercpp::GGML
+    PROPERTIES IMPORTED_LOCATION
+               ${whispercpp_fetch_SOURCE_DIR}/bin/${CMAKE_SHARED_LIBRARY_PREFIX}ggml${CMAKE_SHARED_LIBRARY_SUFFIX})
+  set_target_properties(
+    Whispercpp::GGML
+    PROPERTIES IMPORTED_IMPLIB
+               ${whispercpp_fetch_SOURCE_DIR}/lib/${CMAKE_STATIC_LIBRARY_PREFIX}ggml${CMAKE_STATIC_LIBRARY_SUFFIX})
 
   if(${ACCELERATION} STREQUAL "cpu")
     # add openblas to the link line
@@ -137,16 +146,21 @@ else()
     Whispercpp::Whisper
     PROPERTIES IMPORTED_LOCATION
                ${INSTALL_DIR}/lib/static/${CMAKE_STATIC_LIBRARY_PREFIX}whisper${CMAKE_STATIC_LIBRARY_SUFFIX})
+  add_library(Whispercpp::GGML STATIC IMPORTED)
+  set_target_properties(
+    Whispercpp::GGML
+    PROPERTIES IMPORTED_LOCATION
+               ${INSTALL_DIR}/lib/static/${CMAKE_STATIC_LIBRARY_PREFIX}ggml${CMAKE_STATIC_LIBRARY_SUFFIX})
   set_target_properties(Whispercpp::Whisper PROPERTIES INTERFACE_INCLUDE_DIRECTORIES ${INSTALL_DIR}/include)
 endif()
 
 add_library(Whispercpp INTERFACE)
 add_dependencies(Whispercpp Whispercpp_Build)
-target_link_libraries(Whispercpp INTERFACE Whispercpp::Whisper)
+target_link_libraries(Whispercpp INTERFACE Whispercpp::Whisper Whispercpp::GGML)
 if(WIN32 AND "${ACCELERATION}" STREQUAL "cpu")
   target_link_libraries(Whispercpp INTERFACE Whispercpp::OpenBLAS)
 endif()
 if(APPLE)
   target_link_libraries(Whispercpp INTERFACE "-framework Accelerate -framework CoreML -framework Metal")
-  target_link_libraries(Whispercpp INTERFACE Whispercpp::GGML Whispercpp::CoreML)
+  target_link_libraries(Whispercpp INTERFACE Whispercpp::CoreML)
 endif(APPLE)
