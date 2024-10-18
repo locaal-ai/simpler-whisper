@@ -25,6 +25,10 @@ class CMakeBuild(build_ext):
     def build_extension(self, ext):
         extdir = os.path.abspath(os.path.dirname(self.get_ext_fullpath(ext.name)))
         
+        # Get acceleration and platform from environment variables
+        acceleration = os.environ.get('SIMPLER_WHISPER_ACCELERATION', 'cpu')
+        target_platform = os.environ.get('SIMPLER_WHISPER_PLATFORM', platform.machine())
+
         # Correctly identify the Python executable and other Python-related paths
         if platform.system() == "Windows":
             python_executable = os.path.join(sys.prefix, 'python.exe')
@@ -42,8 +46,14 @@ class CMakeBuild(build_ext):
             f'-DPYTHON_EXECUTABLE={python_executable}',
             f'-DPYTHON_INCLUDE_DIR={python_include}',
             f'-DNUMPY_INCLUDE_DIR={numpy_include}',
-            '-DACCELERATION=cpu',
+            f'-DACCELERATION={acceleration}',
         ]
+
+        # Add platform-specific arguments
+        if platform.system() == "Darwin":  # macOS
+            cmake_args.append(f'-DCMAKE_OSX_ARCHITECTURES={target_platform}')
+            # add MACOS_ARCH env variable to specify the target platform
+            os.environ["MACOS_ARCH"] = target_platform
 
         cfg = 'Debug' if self.debug else 'Release'
         build_args = ['--config', cfg]

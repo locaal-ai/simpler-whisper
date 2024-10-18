@@ -1,5 +1,7 @@
 # Simpler Whisper
 
+![Build and Test](https://github.com/locaal-ai/simpler-whisper/workflows/Build%20and%20Test/badge.svg)
+
 A simple Python wrapper for whisper.cpp, providing an easy-to-use interface for speech recognition using the Whisper model. This package uses a CMake-based build process to create a Python extension that interfaces with the whisper.cpp library, supporting static libraries on Mac and Linux, and dynamic libraries on Windows.
 
 ## Installation
@@ -52,6 +54,30 @@ If you're building from source:
    ```
 
 This will run the CMake build process and compile the extension.
+
+## Build Configuration
+
+Simpler Whisper supports various build configurations to optimize for different hardware and acceleration methods. You can specify the build configuration using environment variables:
+
+- `SIMPLER_WHISPER_ACCELERATION`: Specifies the acceleration method. Options are:
+  - `cpu` (default)
+  - `cuda` (for NVIDIA GPUs)
+  - `hipblas` (for AMD GPUs)
+  - `vulkan` (for cross-platform GPU acceleration)
+
+- `SIMPLER_WHISPER_PLATFORM`: Specifies the target platform. This is mainly used for macOS builds to differentiate between x86_64 and arm64 architectures.
+
+### Example: Building with CUDA acceleration
+
+```bash
+SIMPLER_WHISPER_ACCELERATION=cuda pip install simpler-whisper
+```
+
+### Example: Building for macOS ARM64
+
+```bash
+SIMPLER_WHISPER_PLATFORM=arm64 pip install simpler-whisper
+```
 
 ## License
 

@@ -1,0 +1,69 @@
+name: Build and Test
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Windows builds
+          - os: windows-latest
+            platform: win64
+            acceleration: cpu
+          - os: windows-latest
+            platform: win64
+            acceleration: cuda
+          - os: windows-latest
+            platform: win64
+            acceleration: hipblas
+          - os: windows-latest
+            platform: win64
+            acceleration: vulkan
+          
+          # macOS builds
+          - os: macos-latest
+            platform: x86_64
+          - os: macos-latest
+            platform: arm64
+          
+          # Linux build
+          - os: ubuntu-latest
+            platform: x86_64
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.9'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install numpy cmake wheel setuptools
+
+    - name: Install package
+      env:
+        SIMPLER_WHISPER_ACCELERATION: ${{ matrix.acceleration }}
+        SIMPLER_WHISPER_PLATFORM: ${{ matrix.platform }}
+      run: |
+        pip install .
+
+    - name: Test import
+      run: |
+        python -c "import simpler_whisper; print(simpler_whisper.__file__)"
+
+    - name: Upload wheel
+      uses: actions/upload-artifact@v2
+      with:
+        name: wheel-${{ matrix.os }}-${{ matrix.platform }}-${{ matrix.acceleration }}
+        path: dist/*.whl
