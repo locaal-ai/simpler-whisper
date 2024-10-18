@@ -59,6 +59,7 @@ jobs:
         SIMPLER_WHISPER_ACCELERATION: ${{ matrix.acceleration }}
         SIMPLER_WHISPER_PLATFORM: ${{ matrix.platform }}
       run: |
+        python setup.py build_ext --inplace
         python -m build --wheel
   
     - name: Install built wheel Non-Windows
