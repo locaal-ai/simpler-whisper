@@ -58,16 +58,39 @@ jobs:
       run: |
         python -m build --wheel
   
-    - name: Install built wheel
+    - name: Install built wheel Non-Windows
+      if: startsWith(matrix.os, 'windows') == false
       run: |
         pip install dist/*.whl
   
+    - name: Install built wheel Windows
+      if: startsWith(matrix.os, 'windows') == true  
+      shell: pwsh
+      run: |
+        $wheelFile = Get-ChildItem dist/*.whl | Select-Object -First 1
+        if (-not $wheelFile) {
+          Write-Error "No wheel file found in dist directory"
+          exit 1
+        }
+        Write-Output "Installing wheel file: $($wheelFile.FullName)"
+        pip install $wheelFile.FullName
+
     - name: Test import
       run: |
         python -c "import simpler_whisper; print(simpler_whisper.__file__)"
 
+    - name: Set wheel name
+      shell: pwsh
+      run: |
+        $wheelName = "wheel-${{ matrix.os }}-${{ matrix.platform }}"
+        if ("${{ matrix.acceleration }}" -ne "") {
+          $wheelName += "-${{ matrix.acceleration }}"
+        }
+        echo "WHEEL_NAME=$wheelName" >> $env:GITHUB_ENV
+      
     - name: Upload wheel
       uses: actions/upload-artifact@v4
       with:
-        name: wheel-${{ matrix.os }}-${{ matrix.platform }}-${{ matrix.acceleration }}
+        name: ${{ env.WHEEL_NAME }}
         path: dist/*.whl
+      
