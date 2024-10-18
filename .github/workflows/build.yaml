@@ -11,37 +11,32 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        os: ['windows-latest', 'macos-latest', 'ubuntu-latest']
+        python-version: ['3.9', '3.10', '3.11', '3.12']
         include:
           # Windows builds
           - os: windows-latest
             platform: win64
             acceleration: cpu
-            python-version: ['3.9', '3.10', '3.11', '3.12']
           - os: windows-latest
             platform: win64
             acceleration: cuda
-            python-version: ['3.9', '3.10', '3.11', '3.12']
           - os: windows-latest
             platform: win64
             acceleration: hipblas
-            python-version: ['3.9', '3.10', '3.11', '3.12']
           - os: windows-latest
             platform: win64
             acceleration: vulkan
-            python-version: ['3.9', '3.10', '3.11', '3.12']
             
           # macOS builds
           - os: macos-latest
             platform: x86_64
-            python-version: ['3.9', '3.10', '3.11', '3.12']
           - os: macos-latest
             platform: arm64
-            python-version: ['3.9', '3.10', '3.11', '3.12']
             
           # Linux build
           - os: ubuntu-latest
             platform: x86_64
-            python-version: ['3.9', '3.10', '3.11', '3.12']
 
     runs-on: ${{ matrix.os }}
 
