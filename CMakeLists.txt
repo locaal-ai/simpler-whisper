@@ -32,11 +32,11 @@ set_target_properties(_whisper_cpp PROPERTIES
 )
 
 # Copy the DLL to the output directory on Windows
-if(WIN32)
-    foreach(WHISPER_DLL ${WHISPER_DLLS})
+if(WIN32 OR APPLE)
+    foreach(WHISPER_ADDITIONAL_FILE ${WHISPER_ADDITIONAL_FILES})
         add_custom_command(TARGET _whisper_cpp POST_BUILD
             COMMAND ${CMAKE_COMMAND} -E copy_if_different
-            "${WHISPER_DLL}"
+            "${WHISPER_ADDITIONAL_FILE}"
             $<TARGET_FILE_DIR:_whisper_cpp>
         )
     endforeach()

@@ -2,3 +2,4 @@ include simpler_whisper/Release/*.dll
 include simpler_whisper/Release/*.pyd
 recursive-include simpler_whisper *.so
 recursive-include simpler_whisper *.py
+recursive-include simpler_whisper *.metal

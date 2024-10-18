@@ -45,6 +45,7 @@ if(APPLE)
       IMPORTED_LOCATION
       ${whispercpp_fetch_SOURCE_DIR}/lib/${CMAKE_STATIC_LIBRARY_PREFIX}whisper.coreml${CMAKE_STATIC_LIBRARY_SUFFIX})
 
+  set(WHISPER_ADDITIONAL_FILES ${whispercpp_fetch_SOURCE_DIR}/bin/ggml-metal.metal)
 elseif(WIN32)
   if(NOT DEFINED ACCELERATION)
     message(FATAL_ERROR "ACCELERATION is not set. Please set it to either `cpu`, `cuda`, `vulkan` or `hipblas`")
@@ -108,7 +109,7 @@ elseif(WIN32)
   endif()
 
   # glob all dlls in the bin directory and install them
-  file(GLOB WHISPER_DLLS ${whispercpp_fetch_SOURCE_DIR}/bin/*.dll)
+  file(GLOB WHISPER_ADDITIONAL_FILES ${whispercpp_fetch_SOURCE_DIR}/bin/*.dll)
 else()
   if(${CMAKE_BUILD_TYPE} STREQUAL Release OR ${CMAKE_BUILD_TYPE} STREQUAL RelWithDebInfo)
     set(Whispercpp_BUILD_TYPE Release)
