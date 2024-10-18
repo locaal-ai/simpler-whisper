@@ -29,22 +29,34 @@ class CMakeBuild(build_ext):
         acceleration = os.environ.get('SIMPLER_WHISPER_ACCELERATION', 'cpu')
         target_platform = os.environ.get('SIMPLER_WHISPER_PLATFORM', platform.machine())
 
-        # Correctly identify the Python executable and other Python-related paths
-        if platform.system() == "Windows":
-            python_executable = os.path.join(sys.prefix, 'python.exe')
+        if os.environ.get('Python_ROOT_DIR') is not None:
+            python_root_dir = os.environ.get('Python_ROOT_DIR')
+            if platform.system() == "Windows":
+                python_executable = os.path.join(python_root_dir, 'python.exe')
+                python_include = os.path.join(python_root_dir, 'include')
+                python_lib = os.path.join(python_root_dir, 'libs')
+            else:
+                python_executable = os.path.join(python_root_dir, 'bin', 'python')
+                python_include = os.path.join(python_root_dir, 'include')
+                python_lib = os.path.join(python_root_dir, 'lib')
         else:
-            python_executable = os.path.join(sys.prefix, 'bin', 'python')
-        
-        python_include = sysconfig.get_path('include')
-        python_lib = sysconfig.get_config_var('LIBDIR')
+            # Correctly identify the Python executable and other Python-related paths
+            if platform.system() == "Windows":
+                python_executable = sys.executable
+            else:
+                python_executable = os.path.join(sys.exec_prefix, 'bin', 'python')
+            
+            python_include = sysconfig.get_path('include')
+            python_lib = sysconfig.get_config_var('LIBDIR')
         
         import numpy
         numpy_include = numpy.get_include()
         
         cmake_args = [
             f'-DCMAKE_LIBRARY_OUTPUT_DIRECTORY={extdir}',
-            f'-DPYTHON_EXECUTABLE={python_executable}',
-            f'-DPYTHON_INCLUDE_DIR={python_include}',
+            f'-DPython_EXECUTABLE={python_executable}',
+            f'-DPython_INCLUDE_DIR={python_include}',
+            f'-DPython_LIBRARY={python_lib}',
             f'-DNUMPY_INCLUDE_DIR={numpy_include}',
             f'-DACCELERATION={acceleration}',
         ]
@@ -86,8 +98,8 @@ class CMakeBuild(build_ext):
 setup(
     name='simpler-whisper',
     version='0.1.0',
-    author='Your Name',
-    author_email='your.email@example.com',
+    author='Roy Shilkrot',
+    author_email='roy.shil@gmail.com',
     description='A simple Python wrapper for whisper.cpp',
     long_description='',
     ext_modules=[CMakeExtension('simpler_whisper._whisper_cpp')],

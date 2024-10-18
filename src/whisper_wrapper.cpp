@@ -7,7 +7,8 @@ namespace py = pybind11;
 class WhisperModel {
 public:
     WhisperModel(const std::string& model_path) {
-        ctx = whisper_init_from_file(model_path.c_str());
+        whisper_context_params ctx_params = whisper_context_default_params();
+        ctx = whisper_init_from_file_with_params(model_path.c_str(), ctx_params);
         if (!ctx) {
             throw std::runtime_error("Failed to initialize whisper context");
         }

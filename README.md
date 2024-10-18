@@ -1,6 +1,6 @@
 # Simpler Whisper
 
-![Build and Test](https://github.com/locaal-ai/simpler-whisper/workflows/Build%20and%20Test/badge.svg)
+![Build and Test](https://img.shields.io/github/actions/workflow/status/locaal-ai/simpler-whisper/build.yaml)
 
 A simple Python wrapper for whisper.cpp, providing an easy-to-use interface for speech recognition using the Whisper model. This package uses a CMake-based build process to create a Python extension that interfaces with the whisper.cpp library, supporting static libraries on Mac and Linux, and dynamic libraries on Windows.
 
@@ -26,7 +26,7 @@ import numpy as np
 # Load the model
 model = simpler_whisper.whisper.load_model("path/to/model.bin")
 
-# Load your 16kHz mono audio file as a numpy array of float32
+# Load your 16kHz mono audio samples as a numpy array of float32
 audio = np.frombuffer(open("path/to/audio.raw", "rb").read(), dtype=np.float32)
 
 # Transcribe

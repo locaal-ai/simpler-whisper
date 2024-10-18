@@ -5,9 +5,6 @@ set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Find Python
-if(DEFINED PYTHON_EXECUTABLE)
-    set(Python_EXECUTABLE ${PYTHON_EXECUTABLE})
-endif()
 find_package(Python COMPONENTS Interpreter Development NumPy REQUIRED)
 
 # Fetch pybind11
