@@ -28,35 +28,12 @@ class CMakeBuild(build_ext):
         # Get acceleration and platform from environment variables
         acceleration = os.environ.get('SIMPLER_WHISPER_ACCELERATION', 'cpu')
         target_platform = os.environ.get('SIMPLER_WHISPER_PLATFORM', platform.machine())
-
-        if os.environ.get('Python_ROOT_DIR') is not None:
-            python_root_dir = os.environ.get('Python_ROOT_DIR')
-            if platform.system() == "Windows":
-                python_executable = os.path.join(python_root_dir, 'python.exe')
-                python_include = os.path.join(python_root_dir, 'include')
-                python_lib = os.path.join(python_root_dir, 'libs')
-            else:
-                python_executable = os.path.join(python_root_dir, 'bin', 'python')
-                python_include = os.path.join(python_root_dir, 'include')
-                python_lib = os.path.join(python_root_dir, 'lib')
-        else:
-            # Correctly identify the Python executable and other Python-related paths
-            if platform.system() == "Windows":
-                python_executable = sys.executable
-            else:
-                python_executable = os.path.join(sys.exec_prefix, 'bin', 'python')
-            
-            python_include = sysconfig.get_path('include')
-            python_lib = sysconfig.get_config_var('LIBDIR')
         
         import numpy
         numpy_include = numpy.get_include()
         
         cmake_args = [
             f'-DCMAKE_LIBRARY_OUTPUT_DIRECTORY={extdir}',
-            f'-DPython_EXECUTABLE={python_executable}',
-            f'-DPython_INCLUDE_DIR={python_include}',
-            f'-DPython_LIBRARY={python_lib}',
             f'-DNUMPY_INCLUDE_DIR={numpy_include}',
             f'-DACCELERATION={acceleration}',
         ]
@@ -87,9 +64,6 @@ class CMakeBuild(build_ext):
         
         print("CMake args:", cmake_args)
         print("Build args:", build_args)
-        print("Python executable:", python_executable)
-        print("Python include:", python_include)
-        print("Python lib:", python_lib)
         print("NumPy include:", numpy_include)
         
         subprocess.check_call(['cmake', ext.sourcedir] + cmake_args, cwd=self.build_temp, env=env)
