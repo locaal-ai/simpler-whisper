@@ -11,6 +11,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        python-version: ['3.9', '3.10', '3.11', '3.12']
         include:
           # Windows builds
           - os: windows-latest
@@ -44,7 +45,7 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
-        python-version: '3.9'
+        python-version: ${{ matrix.python-version }}
 
     - name: Install dependencies
       run: |
@@ -82,7 +83,7 @@ jobs:
     - name: Set wheel name
       shell: pwsh
       run: |
-        $wheelName = "wheel-${{ matrix.os }}-${{ matrix.platform }}"
+        $wheelName = "wheel-${{ matrix.os }}-${{ matrix.platform }}-py${{ matrix.python-version }}"
         if ("${{ matrix.acceleration }}" -ne "") {
           $wheelName += "-${{ matrix.acceleration }}"
         }
