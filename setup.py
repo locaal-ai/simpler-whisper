@@ -34,11 +34,13 @@ class CMakeBuild(build_ext):
             f'-DACCELERATION={acceleration}',
         ]
 
+        env = os.environ.copy()
+
         # Add platform-specific arguments
         if platform.system() == "Darwin":  # macOS
-            cmake_args.append(f'-DCMAKE_OSX_ARCHITECTURES={target_platform}')
+            cmake_args += [f'-DCMAKE_OSX_ARCHITECTURES={target_platform}']
             # add MACOS_ARCH env variable to specify the target platform
-            os.environ["MACOS_ARCH"] = target_platform
+            env["MACOS_ARCH"] = target_platform
 
         cfg = 'Debug' if self.debug else 'Release'
         build_args = ['--config', cfg]
@@ -52,7 +54,6 @@ class CMakeBuild(build_ext):
             cmake_args += [f'-DCMAKE_BUILD_TYPE={cfg}']
             build_args += ['--', '-j2']
 
-        env = os.environ.copy()
         env['CXXFLAGS'] = f'{env.get("CXXFLAGS", "")} -DVERSION_INFO=\\"{self.distribution.get_version()}\\"'
         
         if not os.path.exists(self.build_temp):
