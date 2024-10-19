@@ -61,6 +61,24 @@ jobs:
         python setup.py build_ext --inplace
         python -m build --wheel
 
+    - name: Rename wheel file
+      shell: python
+      run: |
+        import os
+        import glob
+        
+        wheel_file = glob.glob('dist/*.whl')[0]
+        base_name = os.path.basename(wheel_file)
+        name_parts = base_name.split('-')
+        
+        # Insert acceleration and platform before the last part (which is like 'any.whl')
+        new_name_parts = name_parts[:-1] + ['${{ matrix.acceleration }}', '${{ matrix.platform }}'] + [name_parts[-1]]
+        new_name = '-'.join(new_name_parts)
+        
+        new_path = os.path.join('dist', new_name)
+        os.rename(wheel_file, new_path)
+        print(f"Renamed {base_name} to {new_name}")
+
     - name: Set wheel name
       shell: pwsh
       run: |
