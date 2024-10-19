@@ -58,12 +58,12 @@ jobs:
         python-version: ${{ matrix.python-version }}
         architecture: 'arm64'
 
-    - name: Set up Python Mac arm64
+    - name: Set up Python Mac x86_64
       if: ${{ matrix.os == 'macos-latest' && matrix.platform == 'x86_64' }}
       uses: actions/setup-python@v5
       with:
         python-version: ${{ matrix.python-version }}
-        architecture: 'x86_64'
+        architecture: 'x64'
 
     - name: Install dependencies
       run: |
