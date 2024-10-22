@@ -2,7 +2,7 @@
 
 ![Build and Test](https://img.shields.io/github/actions/workflow/status/locaal-ai/simpler-whisper/build.yaml)
 
-A zero-dependency simple Python wrapper for [whisper.cpp](https://github.com/ggerganov/whisper.cpp), providing an easy-to-use interface for speech recognition using the Whisper model. 
+A zero-dependency simple Python wrapper for [whisper.cpp](https://github.com/ggerganov/whisper.cpp), providing an easy-to-use interface for speech recognition using the Whisper model.
 
 Why is it better than [faster-whisper](https://github.com/SYSTRAN/faster-whisper) and [pywhispercpp](https://github.com/abdeladim-s/pywhispercpp):
 - Zero-dependency: Everything is shipped with the built wheel, no Python dependency (on `av` or `ctranslate2` etc.) except for `numpy`.
@@ -30,7 +30,7 @@ pip install simpler-whisper
 import simpler_whisper.whisper
 import numpy as np
 
-# Load the model file. 
+# Load the model file.
 # It's on you to download one from https://huggingface.co/ggerganov/whisper.cpp
 model = simpler_whisper.whisper.load_model("path/to/model.bin")
 
@@ -79,7 +79,7 @@ Simpler Whisper supports various build configurations to optimize for different 
 ### Example: Building for Windows with CUDA acceleration
 
 ```powershell
-$env:SIMPLER_WHISPER_ACCELERATION=cuda
+$env:SIMPLER_WHISPER_ACCELERATION="cuda"
 pip install .
 ```
 

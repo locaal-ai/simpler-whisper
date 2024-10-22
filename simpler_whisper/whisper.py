@@ -21,8 +21,103 @@ class WhisperModel:
             del self.model
 
 
+class ThreadedWhisperModel:
+    def __init__(self, model_path: str, use_gpu=False, max_duration_sec=10.0, sample_rate=16000):
+        """
+        Initialize a threaded Whisper model for continuous audio processing.
+
+        Args:
+            model_path (str): Path to the Whisper model file
+            use_gpu (bool): Whether to use GPU acceleration
+            max_duration_sec (float): Maximum duration in seconds before finalizing a segment
+            sample_rate (int): Audio sample rate (default: 16000)
+        """
+        self.model = _whisper_cpp.ThreadedWhisperModel(
+            model_path, use_gpu, max_duration_sec, sample_rate
+        )
+        self._is_running = False
+
+    def start(self, callback, result_check_interval_ms=100):
+        """
+        Start the processing threads with a callback for results.
+
+        Args:
+            callback: Function that takes three arguments:
+                     - chunk_id (int): Unique identifier for the audio chunk
+                     - segments (list): List of transcribed text segments
+                     - is_partial (bool): Whether this is a partial result
+            result_check_interval_ms (int): How often to check for results
+        """
+        if self._is_running:
+            return
+
+        self.model.start(callback, result_check_interval_ms)
+        self._is_running = True
+
+    def stop(self):
+        """
+        Stop processing and clean up resources.
+        Any remaining audio will be processed as a final segment.
+        """
+        if not self._is_running:
+            return
+
+        self.model.stop()
+        self._is_running = False
+
+    def queue_audio(self, audio):
+        """
+        Queue audio for processing.
+
+        Args:
+            audio: Audio samples as numpy array or array-like object.
+                  Will be converted to float32.
+
+        Returns:
+            chunk_id (int): Unique identifier for this audio chunk
+        """
+        # Ensure audio is a numpy array of float32
+        audio = np.array(audio, dtype=np.float32)
+        return self.model.queue_audio(audio)
+
+    def set_max_duration(self, max_duration_sec, sample_rate=16000):
+        """
+        Change the maximum duration for partial segments.
+
+        Args:
+            max_duration_sec (float): New maximum duration in seconds
+            sample_rate (int): Audio sample rate (default: 16000)
+        """
+        self.model.set_max_duration(max_duration_sec, sample_rate)
+
+    def __del__(self):
+        # Ensure threads are stopped and resources cleaned up
+        if hasattr(self, "model"):
+            if self._is_running:
+                self.stop()
+            del self.model
+
+
 def load_model(model_path: str, use_gpu=False) -> WhisperModel:
     return WhisperModel(model_path, use_gpu)
+
+
+def load_threaded_model(
+    model_path: str, use_gpu=False, max_duration_sec=10.0, sample_rate=16000
+) -> ThreadedWhisperModel:
+    """
+    Load a threaded Whisper model for continuous audio processing.
+
+    Args:
+        model_path (str): Path to the Whisper model file
+        use_gpu (bool): Whether to use GPU acceleration
+        max_duration_sec (float): Maximum duration in seconds before finalizing a segment
+        sample_rate (int): Audio sample rate (default: 16000)
+
+    Returns:
+        ThreadedWhisperModel: A model instance ready for processing
+    """
+    return ThreadedWhisperModel(model_path, use_gpu, max_duration_sec, sample_rate)
 
 
 def set_log_callback(callback):
