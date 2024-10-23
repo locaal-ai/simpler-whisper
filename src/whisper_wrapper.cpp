@@ -44,15 +44,16 @@ public:
         ctx = whisper_init_from_file_with_params(model_path.c_str(), ctx_params);
         if (!ctx)
         {
+            std::cout << "Failed to initialize whisper context" << std::endl;
             throw std::runtime_error("Failed to initialize whisper context");
         }
     }
 
     ~WhisperModel()
     {
-        std::cout << "WhisperModel d'tor Freeing whisper context" << std::endl;
         if (ctx)
         {
+            std::cout << "WhisperModel d'tor Freeing whisper context" << std::endl;
             whisper_free(ctx);
         }
     }
@@ -86,15 +87,16 @@ public:
             std::cout << "Whisper inference failed" << std::endl;
             throw std::runtime_error("Whisper inference failed");
         }
+        std::cout << "Whisper inference succeeded" << std::endl;
 
         int n_segments = whisper_full_n_segments(ctx);
         std::vector<std::string> transcription;
-
         for (int i = 0; i < n_segments; i++)
         {
             const char *text = whisper_full_get_segment_text(ctx, i);
             transcription.push_back(std::string(text));
         }
+        std::cout << "num segments: " << n_segments << std::endl;
 
         return transcription;
     }
@@ -211,6 +213,13 @@ private:
             if (accumulated_buffer.empty())
                 return;
 
+            // check if buffer has less than 1 second of audio
+            if (accumulated_samples < 16000)
+            {
+                std::cout << "Not enough audio to process" << std::endl;
+                return;
+            }
+
             process_buffer = accumulated_buffer;
             current_id = current_chunk_id;
 
@@ -237,7 +246,7 @@ private:
         // Add result to output queue
         {
             std::lock_guard<std::mutex> lock(result_mutex);
-            result_queue.push(std::move(result));
+            result_queue.push(result);
             result_cv.notify_one();
         }
     }
@@ -326,15 +335,21 @@ private:
 
             if (!results.empty())
             {
+                std::cout << "Got " << results.size() << " results." << std::endl;
                 py::gil_scoped_acquire gil;
                 for (const auto &result : results)
                 {
-                    py::list segments;
+                    // concatenate segments into a single string
+                    std::string full_text;
                     for (const auto &segment : result.segments)
                     {
-                        segments.append(segment);
+                        full_text += segment;
                     }
-                    result_callback(result.chunk_id, segments, result.is_partial);
+                    std::cout << "Calling result callback with ID: " << result.chunk_id << std::endl;
+                    if (result_callback)
+                    {
+                        result_callback(result.chunk_id, full_text, result.is_partial);
+                    }
                 }
             }
         }

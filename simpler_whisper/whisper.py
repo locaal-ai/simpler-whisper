@@ -1,4 +1,5 @@
 import numpy as np
+from typing import Callable, List
 from . import _whisper_cpp
 
 
@@ -22,7 +23,9 @@ class WhisperModel:
 
 
 class ThreadedWhisperModel:
-    def __init__(self, model_path: str, use_gpu=False, max_duration_sec=10.0, sample_rate=16000):
+    def __init__(
+        self, model_path: str, use_gpu=False, max_duration_sec=10.0, sample_rate=16000
+    ):
         """
         Initialize a threaded Whisper model for continuous audio processing.
 
@@ -37,14 +40,16 @@ class ThreadedWhisperModel:
         )
         self._is_running = False
 
-    def start(self, callback, result_check_interval_ms=100):
+    def start(
+        self, callback: Callable[[int, str, bool], None], result_check_interval_ms=100
+    ):
         """
         Start the processing threads with a callback for results.
 
         Args:
             callback: Function that takes three arguments:
                      - chunk_id (int): Unique identifier for the audio chunk
-                     - segments (list): List of transcribed text segments
+                     - segments (str): Transcribed text for the audio chunk
                      - is_partial (bool): Whether this is a partial result
             result_check_interval_ms (int): How often to check for results
         """
