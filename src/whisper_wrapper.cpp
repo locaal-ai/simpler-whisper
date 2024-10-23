@@ -40,11 +40,9 @@ public:
     {
         whisper_context_params ctx_params = whisper_context_default_params();
         ctx_params.use_gpu = use_gpu;
-        std::cout << "WhisperModel c'tor Loading model from path: " << model_path << std::endl;
         ctx = whisper_init_from_file_with_params(model_path.c_str(), ctx_params);
         if (!ctx)
         {
-            std::cout << "Failed to initialize whisper context" << std::endl;
             throw std::runtime_error("Failed to initialize whisper context");
         }
     }
@@ -53,7 +51,6 @@ public:
     {
         if (ctx)
         {
-            std::cout << "WhisperModel d'tor Freeing whisper context" << std::endl;
             whisper_free(ctx);
         }
     }
@@ -77,17 +74,11 @@ public:
 
     std::vector<std::string> transcribe_raw_audio(const float *audio_data, int n_samples)
     {
-        std::cout << "Transcribing audio with " << n_samples << " samples" << std::endl;
-        std::cout << "first sample: " << audio_data[0] << std::endl;
-        std::cout << "last sample: " << audio_data[n_samples - 1] << std::endl;
-
         whisper_full_params params = whisper_full_default_params(WHISPER_SAMPLING_GREEDY);
         if (whisper_full(ctx, params, audio_data, n_samples) != 0)
         {
-            std::cout << "Whisper inference failed" << std::endl;
             throw std::runtime_error("Whisper inference failed");
         }
-        std::cout << "Whisper inference succeeded" << std::endl;
 
         int n_segments = whisper_full_n_segments(ctx);
         std::vector<std::string> transcription;
@@ -96,7 +87,6 @@ public:
             const char *text = whisper_full_get_segment_text(ctx, i);
             transcription.push_back(std::string(text));
         }
-        std::cout << "num segments: " << n_segments << std::endl;
 
         return transcription;
     }
@@ -125,7 +115,7 @@ public:
                          float max_duration_sec = 10.0f, int sample_rate = 16000)
         : running(false), next_chunk_id(0),
           max_samples(static_cast<size_t>(max_duration_sec * sample_rate)),
-          accumulated_samples(0), current_chunk_id(0), model_path(model_path),
+          current_chunk_id(0), model_path(model_path),
           use_gpu(use_gpu)
     {
     }
@@ -173,7 +163,6 @@ public:
         {
             std::lock_guard<std::mutex> lock(buffer_mutex);
             accumulated_buffer.clear();
-            accumulated_samples = 0;
         }
     }
 
@@ -209,33 +198,23 @@ private:
 
         {
             std::lock_guard<std::mutex> lock(buffer_mutex);
-            std::cout << "Processing accumulated audio with size: " << accumulated_buffer.size() << std::endl;
-            if (accumulated_buffer.empty())
+            if (accumulated_buffer.empty() || accumulated_buffer.size() < 16000)
                 return;
-
-            // check if buffer has less than 1 second of audio
-            if (accumulated_samples < 16000)
-            {
-                std::cout << "Not enough audio to process" << std::endl;
-                return;
-            }
 
             process_buffer = accumulated_buffer;
             current_id = current_chunk_id;
 
             // Only clear the buffer if we're processing a final result
-            if (force_final || accumulated_samples >= max_samples)
+            if (force_final || accumulated_buffer.size() >= max_samples)
             {
                 accumulated_buffer.clear();
-                accumulated_samples = 0;
             }
         }
 
         // Process audio
-        std::cout << "Processing audio with size: " << process_buffer.size() << std::endl;
-        std::cout << "Pointer to first sample: " << process_buffer.data() << std::endl;
-        std::cout << "First sample: " << process_buffer[0] << std::endl;
         std::vector<std::string> segments = model.transcribe_raw_audio(process_buffer.data(), process_buffer.size());
+
+        std::cout << "Transcription: " << segments[0] << std::endl;
 
         TranscriptionResult result;
         result.chunk_id = current_id;
@@ -253,11 +232,7 @@ private:
 
     void processThread()
     {
-        std::cout << "Starting process thread." << std::endl;
-
-        std::cout << "Loading model from path: " << this->model_path << std::endl;
         WhisperModel model(this->model_path, this->use_gpu);
-        std::cout << "Model loaded." << std::endl;
 
         while (running)
         {
@@ -273,7 +248,6 @@ private:
                 if (!running)
                 {
                     // Process any remaining audio as final before shutting down
-                    std::cout << "Shutting down, processing remaining audio as final." << std::endl;
                     processAccumulatedAudio(model, true);
                     break;
                 }
@@ -283,7 +257,6 @@ private:
                     chunk = std::move(input_queue.front());
                     input_queue.pop();
                     has_chunk = true;
-                    std::cout << "Got chunk with ID: " << chunk.id << " and size: " << chunk.data.size() << std::endl;
                 }
             }
 
@@ -297,17 +270,13 @@ private:
                     std::copy(chunk.data.begin(), chunk.data.end(),
                               accumulated_buffer.begin() + old_size);
 
-                    accumulated_samples += chunk.data.size();
                     current_chunk_id = chunk.id;
-                    std::cout << "Accumulated buffer size: " << accumulated_buffer.size() << std::endl;
                 }
 
                 // Process the accumulated audio
-                std::cout << "Processing accumulated audio." << std::endl;
                 processAccumulatedAudio(model, false);
             }
         }
-        std::cout << "Exiting process thread." << std::endl;
     }
 
     void resultThread(int check_interval_ms)
@@ -335,7 +304,6 @@ private:
 
             if (!results.empty())
             {
-                std::cout << "Got " << results.size() << " results." << std::endl;
                 py::gil_scoped_acquire gil;
                 for (const auto &result : results)
                 {
@@ -345,10 +313,9 @@ private:
                     {
                         full_text += segment;
                     }
-                    std::cout << "Calling result callback with ID: " << result.chunk_id << std::endl;
                     if (result_callback)
                     {
-                        result_callback(result.chunk_id, full_text, result.is_partial);
+                        result_callback((int)result.chunk_id, py::str(full_text), result.is_partial);
                     }
                 }
             }
@@ -362,7 +329,6 @@ private:
 
     // Audio accumulation
     std::vector<float> accumulated_buffer;
-    size_t accumulated_samples;
     size_t max_samples;
     std::mutex buffer_mutex;
 
