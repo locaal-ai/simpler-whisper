@@ -12,6 +12,17 @@
 
 namespace py = pybind11;
 
+std::string trim(const std::string &str)
+{
+    size_t start = str.find_first_not_of(" \t\n\r");
+    size_t end = str.find_last_not_of(" \t\n\r");
+
+    if (start == std::string::npos) // handles empty string "" and all-whitespace strings like " "
+        return "";
+
+    return str.substr(start, end - start + 1);
+}
+
 // Global variable to store the Python callback function
 py::function g_py_log_callback;
 
@@ -212,7 +223,19 @@ private:
         }
 
         // Process audio
-        std::vector<std::string> segments = model.transcribe_raw_audio(process_buffer.data(), process_buffer.size());
+        std::vector<std::string> segments;
+        try
+        {
+            segments = model.transcribe_raw_audio(process_buffer.data(), process_buffer.size());
+        }
+        catch (const std::exception &e)
+        {
+            std::cerr << "Exception during transcription: " << e.what() << std::endl;
+        }
+        catch (...)
+        {
+            std::cerr << "Unknown exception during transcription" << std::endl;
+        }
 
         std::cout << "Transcription: " << segments[0] << std::endl;
 
@@ -307,15 +330,33 @@ private:
                 py::gil_scoped_acquire gil;
                 for (const auto &result : results)
                 {
+                    if (result.segments.empty())
+                        continue;
+
                     // concatenate segments into a single string
                     std::string full_text;
                     for (const auto &segment : result.segments)
                     {
                         full_text += segment;
                     }
+                    full_text = trim(full_text);
+                    if (full_text.empty())
+                        continue;
+
                     if (result_callback)
                     {
-                        result_callback((int)result.chunk_id, py::str(full_text), result.is_partial);
+                        try
+                        {
+                            result_callback((int)result.chunk_id, py::str(full_text), result.is_partial);
+                        }
+                        catch (const std::exception &e)
+                        {
+                            std::cerr << "Exception in result callback: " << e.what() << std::endl;
+                        }
+                        catch (...)
+                        {
+                            std::cerr << "Unknown exception in result callback" << std::endl;
+                        }
                     }
                 }
             }
