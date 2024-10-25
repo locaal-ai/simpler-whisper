@@ -74,17 +74,18 @@ jobs:
       env:
         SIMPLER_WHISPER_ACCELERATION: ${{ matrix.acceleration }}
         SIMPLER_WHISPER_PLATFORM: ${{ matrix.platform }}
+        SIMPLER_WHISPER_PYTHON_VERSION: ${{ matrix.python-version }}
       run: |
         python setup.py build_ext --inplace
         python -m build --wheel
-  
+
     - name: Install built wheel Non-Windows
       if: startsWith(matrix.os, 'windows') == false
       run: |
         pip install dist/*.whl
-  
+
     - name: Install built wheel Windows
-      if: startsWith(matrix.os, 'windows') == true  
+      if: startsWith(matrix.os, 'windows') == true
       shell: pwsh
       run: |
         $wheelFile = Get-ChildItem dist/*.whl | Select-Object -First 1
@@ -104,15 +105,15 @@ jobs:
       run: |
         import os
         import glob
-        
+
         wheel_file = glob.glob('dist/*.whl')[0]
         base_name = os.path.basename(wheel_file)
         name_parts = base_name.split('-')
-        
+
         # Insert acceleration and platform before the last part (which is like 'any.whl')
         new_name_parts = name_parts[:-1] + ['${{ matrix.acceleration }}', '${{ matrix.platform }}'] + [name_parts[-1]]
         new_name = '-'.join(new_name_parts)
-        
+
         new_path = os.path.join('dist', new_name)
         os.rename(wheel_file, new_path)
         print(f"Renamed {base_name} to {new_name}")
@@ -125,10 +126,9 @@ jobs:
           $wheelName += "-${{ matrix.acceleration }}"
         }
         echo "WHEEL_NAME=$wheelName" >> $env:GITHUB_ENV
-      
+
     - name: Upload wheel
       uses: actions/upload-artifact@v4
       with:
         name: ${{ env.WHEEL_NAME }}
         path: dist/*.whl
-      
