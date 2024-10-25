@@ -5,7 +5,7 @@ set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Find Python
-find_package(Python COMPONENTS Interpreter Development NumPy REQUIRED)
+find_package(Python ${PYTHON_VERSION} EXACT COMPONENTS Interpreter Development NumPy REQUIRED)
 
 # Fetch pybind11
 include(FetchContent)
