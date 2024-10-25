@@ -56,6 +56,7 @@ public:
         {
             throw std::runtime_error("Failed to initialize whisper context");
         }
+        params = whisper_full_default_params(WHISPER_SAMPLING_GREEDY);
     }
 
     ~WhisperModel()
@@ -85,7 +86,6 @@ public:
 
     std::vector<std::string> transcribe_raw_audio(const float *audio_data, int n_samples)
     {
-        whisper_full_params params = whisper_full_default_params(WHISPER_SAMPLING_GREEDY);
         if (whisper_full(ctx, params, audio_data, n_samples) != 0)
         {
             throw std::runtime_error("Whisper inference failed");
@@ -104,6 +104,7 @@ public:
 
 private:
     whisper_context *ctx;
+    whisper_full_params params;
 };
 
 struct AudioChunk
@@ -237,7 +238,10 @@ private:
             std::cerr << "Unknown exception during transcription" << std::endl;
         }
 
-        std::cout << "Transcription: " << segments[0] << std::endl;
+        if (segments.empty())
+        {
+            return;
+        }
 
         TranscriptionResult result;
         result.chunk_id = current_id;

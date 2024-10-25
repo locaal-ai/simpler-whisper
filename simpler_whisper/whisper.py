@@ -24,7 +24,12 @@ class WhisperModel:
 
 class ThreadedWhisperModel:
     def __init__(
-        self, model_path: str, use_gpu=False, max_duration_sec=10.0, sample_rate=16000
+        self,
+        model_path: str,
+        callback: Callable[[int, str, bool], None],
+        use_gpu=False,
+        max_duration_sec=10.0,
+        sample_rate=16000,
     ):
         """
         Initialize a threaded Whisper model for continuous audio processing.
@@ -39,10 +44,13 @@ class ThreadedWhisperModel:
             model_path, use_gpu, max_duration_sec, sample_rate
         )
         self._is_running = False
+        self.callback = callback
 
-    def start(
-        self, callback: Callable[[int, str, bool], None], result_check_interval_ms=100
-    ):
+    def handle_result(self, chunk_id: int, text: str, is_partial: bool):
+        if self.callback is not None:
+            self.callback(chunk_id, text, is_partial)
+
+    def start(self, result_check_interval_ms=100):
         """
         Start the processing threads with a callback for results.
 
@@ -56,7 +64,7 @@ class ThreadedWhisperModel:
         if self._is_running:
             return
 
-        self.model.start(callback, result_check_interval_ms)
+        self.model.start(self.handle_result, result_check_interval_ms)
         self._is_running = True
 
     def stop(self):

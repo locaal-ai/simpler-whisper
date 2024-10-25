@@ -71,36 +71,46 @@ def test_simpler_whisper():
 
 def test_threaded_whisper():
     def handle_result(chunk_id: int, text: str, is_partial: bool):
-        print(f"Chunk {chunk_id} results ({'partial' if is_partial else 'final'}):")
-        print(f"  {text}")
+        print(
+            f"Chunk {chunk_id} results ({'partial' if is_partial else 'final'}): {text}"
+        )
 
     # Create model with 10-second max duration
     model = ThreadedWhisperModel(
-        model_path=model_path, use_gpu=True, max_duration_sec=10.0
+        model_path=model_path,
+        callback=handle_result,
+        use_gpu=True,
+        max_duration_sec=10.0,
     )
 
     # load audio from file with av
     import av
-    container = av.open(R"C:\Users\roysh\Downloads\1847363777395929088.mp4")
+
+    container = av.open(
+        R"local_path_to_audio_file"
+    )
     audio = container.streams.audio[0]
     print(audio)
     frame_generator = container.decode(audio)
 
     # Start processing with callback
     print("Starting threaded Whisper model...")
-    model.start(callback=handle_result)
+    model.start()
 
     for i, frame in enumerate(frame_generator):
-        # print(f"Queueing audio chunk {i + 1}")
         # Read audio chunk
+        incoming_audio = frame.to_ndarray().mean(axis=0)
+        incoming_audio = incoming_audio / 32768.0  # normalize to [-1, 1]
         # resample to 16kHz
-        samples = resampy.resample(frame.to_ndarray().mean(axis=0), frame.rate, 16000)
+        samples = resampy.resample(incoming_audio, frame.rate, 16000)
 
         # Queue some audio (will get partial results until 10 seconds accumulate)
         chunk_id = model.queue_audio(samples)
-        # print(f"  Queued chunk {i + 1} with ID {chunk_id} size {len(samples)}")
         # sleep for the size of the audio chunk
-        time.sleep(len(samples) / 16000)
+        try:
+            time.sleep(len(samples) / 16000)
+        except:
+            break
 
     # close the container
     container.close()
