@@ -29,9 +29,10 @@ py::function g_py_log_callback;
 // C++ callback function that will be passed to whisper_log_set
 void cpp_log_callback(ggml_log_level level, const char *text, void *)
 {
-    if (!g_py_log_callback.is_none())
+    if (!g_py_log_callback.is_none() && text != nullptr && strlen(text) > 0)
     {
-        g_py_log_callback(level, text);
+        py::gil_scoped_acquire gil;
+        g_py_log_callback(level, std::string(text));
     }
 }
 
@@ -263,7 +264,7 @@ private:
 
         while (running)
         {
-            AudioChunk chunk;
+            AudioChunk all_chunks;
             bool has_chunk = false;
 
             // Get next chunk from input queue
@@ -279,10 +280,13 @@ private:
                     break;
                 }
 
-                if (!input_queue.empty())
+                // take all chunks from the queue and create a single chunk
+                while (!input_queue.empty())
                 {
-                    chunk = std::move(input_queue.front());
+                    AudioChunk chunk = std::move(input_queue.front());
                     input_queue.pop();
+                    all_chunks.data.insert(all_chunks.data.end(), chunk.data.begin(), chunk.data.end());
+                    all_chunks.id = chunk.id;
                     has_chunk = true;
                 }
             }
@@ -293,11 +297,11 @@ private:
                 {
                     std::lock_guard<std::mutex> lock(buffer_mutex);
                     size_t old_size = accumulated_buffer.size();
-                    accumulated_buffer.resize(old_size + chunk.data.size());
-                    std::copy(chunk.data.begin(), chunk.data.end(),
+                    accumulated_buffer.resize(old_size + all_chunks.data.size());
+                    std::copy(all_chunks.data.begin(), all_chunks.data.end(),
                               accumulated_buffer.begin() + old_size);
 
-                    current_chunk_id = chunk.id;
+                    current_chunk_id = all_chunks.id;
                 }
 
                 // Process the accumulated audio
@@ -420,8 +424,11 @@ PYBIND11_MODULE(_whisper_cpp, m)
     m.def("set_log_callback", &set_log_callback, "Set the log callback function");
 
     py::enum_<ggml_log_level>(m, "LogLevel")
-        .value("ERROR", GGML_LOG_LEVEL_ERROR)
-        .value("WARN", GGML_LOG_LEVEL_WARN)
+        .value("NONE", GGML_LOG_LEVEL_NONE)
         .value("INFO", GGML_LOG_LEVEL_INFO)
+        .value("WARN", GGML_LOG_LEVEL_WARN)
+        .value("ERROR", GGML_LOG_LEVEL_ERROR)
+        .value("DEBUG", GGML_LOG_LEVEL_DEBUG)
+        .value("CONT", GGML_LOG_LEVEL_CONT)
         .export_values();
 }

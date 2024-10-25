@@ -1,3 +1,4 @@
+import argparse
 import sys
 
 # Remove the current directory from sys.path to avoid conflicts with the installed package
@@ -15,13 +16,23 @@ from simpler_whisper.whisper import (
 )
 
 
+log_levels = {LogLevel.ERROR: "ERROR", LogLevel.WARN: "WARN", LogLevel.INFO: "INFO"}
+
+
 def my_log_callback(level, message):
-    log_levels = {LogLevel.ERROR: "ERROR", LogLevel.WARN: "WARN", LogLevel.INFO: "INFO"}
-    print(f"whisper.cpp [{log_levels.get(level, 'UNKNOWN')}] {message.strip()}")
+    if message is not None and len(message.strip()) > 0:
+        print(f"whisper.cpp [{log_levels.get(level, 'UNKNOWN')}] {message.strip()}")
 
 
 # Path to your Whisper model file
-model_path = R"ggml-tiny.en-q5_1.bin"
+# Parse command-line arguments
+parser = argparse.ArgumentParser(description="Test simpler-whisper model.")
+parser.add_argument("model_path", type=str, help="Path to the Whisper model file")
+parser.add_argument("audio_file", type=str, help="Path to the audio file")
+args = parser.parse_args()
+
+model_path = args.model_path
+audio_file = args.audio_file
 
 
 def test_simpler_whisper():
@@ -70,6 +81,8 @@ def test_simpler_whisper():
 
 
 def test_threaded_whisper():
+    set_log_callback(my_log_callback)
+
     def handle_result(chunk_id: int, text: str, is_partial: bool):
         print(
             f"Chunk {chunk_id} results ({'partial' if is_partial else 'final'}): {text}"
@@ -86,9 +99,7 @@ def test_threaded_whisper():
     # load audio from file with av
     import av
 
-    container = av.open(
-        R"local_path_to_audio_file"
-    )
+    container = av.open(audio_file)
     audio = container.streams.audio[0]
     print(audio)
     frame_generator = container.decode(audio)
@@ -98,17 +109,25 @@ def test_threaded_whisper():
     model.start()
 
     for i, frame in enumerate(frame_generator):
-        # Read audio chunk
-        incoming_audio = frame.to_ndarray().mean(axis=0)
-        incoming_audio = incoming_audio / 32768.0  # normalize to [-1, 1]
-        # resample to 16kHz
-        samples = resampy.resample(incoming_audio, frame.rate, 16000)
-
-        # Queue some audio (will get partial results until 10 seconds accumulate)
-        chunk_id = model.queue_audio(samples)
-        # sleep for the size of the audio chunk
         try:
-            time.sleep(len(samples) / 16000)
+            # Read audio chunk
+            incoming_audio = frame.to_ndarray()
+            # check if stereo
+            if incoming_audio.shape[0] == 2:
+                incoming_audio = incoming_audio.mean(axis=0)
+            # check if the type is int16 or float32
+            if incoming_audio.dtype == np.int16:
+                incoming_audio = incoming_audio / 32768.0  # normalize to [-1, 1]
+            # resample to 16kHz if needed
+            if frame.rate != 16000:
+                samples = resampy.resample(incoming_audio, frame.rate, 16000)
+            else:
+                samples = incoming_audio
+
+            # Queue some audio (will get partial results until 10 seconds accumulate)
+            chunk_id = model.queue_audio(samples)
+            # sleep for the size of the audio chunk
+            time.sleep(float(len(samples)) / float(16000))
         except:
             break
 
