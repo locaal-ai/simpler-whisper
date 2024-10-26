@@ -99,7 +99,7 @@ class CMakeBuild(build_ext):
 
 setup(
     name="simpler-whisper",
-    version="0.2.0",
+    version="0.2.1",
     author="Roy Shilkrot",
     author_email="roy.shil@gmail.com",
     description="A simple Python wrapper for whisper.cpp",

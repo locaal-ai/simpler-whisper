@@ -110,8 +110,8 @@ jobs:
         base_name = os.path.basename(wheel_file)
         name_parts = base_name.split('-')
 
-        # Insert acceleration and platform before the last part (which is like 'any.whl')
-        new_name_parts = name_parts[:-1] + ['${{ matrix.acceleration }}', '${{ matrix.platform }}'] + [name_parts[-1]]
+        # Insert acceleration and platform after the first part of the name
+        new_name_parts = name_parts[:1] + ['${{ matrix.acceleration }}', '${{ matrix.platform }}'] + [name_parts[1:]]
         new_name = '-'.join(new_name_parts)
 
         new_path = os.path.join('dist', new_name)

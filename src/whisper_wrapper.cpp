@@ -1,6 +1,8 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/numpy.h>
 #include <pybind11/functional.h>
+#include <pybind11/stl.h>
+
 #include <whisper.h>
 #include <queue>
 #include <mutex>
@@ -44,6 +46,23 @@ void set_log_callback(py::function callback)
     ggml_log_set(cpp_log_callback, nullptr);
 }
 
+struct WhisperToken
+{
+    int id;
+    float p;
+    int64_t t0;
+    int64_t t1;
+    std::string text;
+};
+
+struct WhisperSegment
+{
+    std::string text;
+    int64_t start;
+    int64_t end;
+    std::vector<WhisperToken> tokens;
+};
+
 // Original synchronous implementation
 class WhisperModel
 {
@@ -58,6 +77,8 @@ public:
             throw std::runtime_error("Failed to initialize whisper context");
         }
         params = whisper_full_default_params(WHISPER_SAMPLING_GREEDY);
+        params.no_timestamps = false;
+        params.token_timestamps = true;
     }
 
     ~WhisperModel()
@@ -74,18 +95,18 @@ public:
         float *audio_data = static_cast<float *>(audio_buffer.ptr);
         int n_samples = audio_buffer.size;
 
-        std::vector<std::string> segments = transcribe_raw_audio(audio_data, n_samples);
+        std::vector<WhisperSegment> segments = transcribe_raw_audio(audio_data, n_samples);
 
         py::list result;
         for (const auto &segment : segments)
         {
-            result.append(segment);
+            result.append(py::cast(segment));
         }
 
         return result;
     }
 
-    std::vector<std::string> transcribe_raw_audio(const float *audio_data, int n_samples)
+    std::vector<WhisperSegment> transcribe_raw_audio(const float *audio_data, int n_samples)
     {
         if (whisper_full(ctx, params, audio_data, n_samples) != 0)
         {
@@ -93,11 +114,28 @@ public:
         }
 
         int n_segments = whisper_full_n_segments(ctx);
-        std::vector<std::string> transcription;
+        std::vector<WhisperSegment> transcription;
         for (int i = 0; i < n_segments; i++)
         {
             const char *text = whisper_full_get_segment_text(ctx, i);
-            transcription.push_back(std::string(text));
+            WhisperSegment segment;
+            segment.text = std::string(text);
+            const int n_tokens = whisper_full_n_tokens(ctx, i);
+            for (int j = 0; j < n_tokens; ++j)
+            {
+                // get token
+                whisper_token_data token =
+                    whisper_full_get_token_data(ctx, i, j);
+                WhisperToken wt;
+                wt.id = token.id;
+                wt.p = token.p;
+                wt.t0 = token.t0;
+                wt.t1 = token.t1;
+                wt.text = std::string(whisper_token_to_str(ctx, token.id));
+                segment.tokens.push_back(wt);
+            }
+
+            transcription.push_back(segment);
         }
 
         return transcription;
@@ -225,7 +263,7 @@ private:
         }
 
         // Process audio
-        std::vector<std::string> segments;
+        std::vector<WhisperSegment> segments;
         try
         {
             segments = model.transcribe_raw_audio(process_buffer.data(), process_buffer.size());
@@ -246,7 +284,10 @@ private:
 
         TranscriptionResult result;
         result.chunk_id = current_id;
-        result.segments = segments;
+        for (const auto &segment : segments)
+        {
+            result.segments.push_back(segment.text);
+        }
         // Set partial flag based on whether this is a final result
         result.is_partial = !(force_final || process_buffer.size() >= max_samples);
 
@@ -400,6 +441,35 @@ private:
 
 PYBIND11_MODULE(_whisper_cpp, m)
 {
+    // Bind WhisperToken
+    py::class_<WhisperToken>(m, "WhisperToken")
+        .def(py::init<>())
+        .def_readwrite("id", &WhisperToken::id)
+        .def_readwrite("p", &WhisperToken::p)
+        .def_readwrite("t0", &WhisperToken::t0)
+        .def_readwrite("t1", &WhisperToken::t1)
+        .def_readwrite("text", &WhisperToken::text)
+        .def("__str__", [](const WhisperToken &t)
+             {
+            std::stringstream ss;
+            ss << t.text << " (id: " << t.id << ", p: " << t.p << ")";
+            return ss.str(); });
+
+    // Bind WhisperSement
+    py::class_<WhisperSegment>(m, "WhisperSement")
+        .def(py::init<>())
+        .def_readwrite("text", &WhisperSegment::text)
+        .def_readwrite("start", &WhisperSegment::start)
+        .def_readwrite("end", &WhisperSegment::end)
+        .def_readwrite("tokens", &WhisperSegment::tokens)
+        .def("__str__", [](const WhisperSegment &s)
+             { return s.text; })
+        .def("__repr__", [](const WhisperSegment &s)
+             {
+            std::stringstream ss;
+            ss << "WhisperSegment(text=\"" << s.text << "\", start=" << s.start << ", end=" << s.end << ")";
+            return ss.str(); });
+
     // Expose synchronous model
     py::class_<WhisperModel>(m, "WhisperModel")
         .def(py::init<const std::string &, bool>())

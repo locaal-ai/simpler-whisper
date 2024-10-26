@@ -1,3 +1,4 @@
+import av
 import argparse
 import sys
 
@@ -29,55 +30,96 @@ def my_log_callback(level, message):
 parser = argparse.ArgumentParser(description="Test simpler-whisper model.")
 parser.add_argument("model_path", type=str, help="Path to the Whisper model file")
 parser.add_argument("audio_file", type=str, help="Path to the audio file")
+# non-positoinal required arg for the method to use (regular vs threaded)
+parser.add_argument(
+    "method",
+    type=str,
+    choices=["regular", "threaded"],
+    help="The method to use for testing the model",
+)
 args = parser.parse_args()
 
 model_path = args.model_path
 audio_file = args.audio_file
 
 
+def get_samples_from_frame(frame: av.AudioFrame) -> np.ndarray:
+    """
+    Extracts and processes audio samples from an audio frame.
+    This function reads an audio chunk from the provided audio frame, converts it to mono if it is stereo,
+    normalizes the audio if it is in int16 format, and resamples it to 16kHz if necessary.
+    Parameters:
+    frame (av.AudioFrame): The input audio frame containing the audio data.
+    Returns:
+    numpy.ndarray: The processed audio samples, normalized and resampled to 16kHz if needed.
+    """
+    # Read audio chunk
+    incoming_audio = frame.to_ndarray()
+    # check if stereo
+    if incoming_audio.shape[0] == 2:
+        incoming_audio = incoming_audio.mean(axis=0)
+    # check if the type is int16 or float32
+    if incoming_audio.dtype == np.int16:
+        incoming_audio = incoming_audio / 32768.0  # normalize to [-1, 1]
+    # resample to 16kHz if needed
+    if frame.rate != 16000:
+        samples = resampy.resample(incoming_audio, frame.rate, 16000)
+    else:
+        samples = incoming_audio
+
+    return samples
+
+
 def test_simpler_whisper():
-    try:
-        set_log_callback(my_log_callback)
+    set_log_callback(my_log_callback)
 
-        # Load the model
-        print("Loading the Whisper model...")
-        model = load_model(model_path, use_gpu=True)
-        print("Model loaded successfully!")
+    # Load the model
+    print("Loading the Whisper model...")
+    model = load_model(model_path, use_gpu=True)
+    print("Model loaded successfully!")
 
-        # Create some dummy audio data
-        # In a real scenario, this would be your actual audio data
-        print("Creating dummy audio data...")
-        dummy_audio = np.random.rand(17000).astype(
-            np.float32
-        )  # 1 second of random noise at 16kHz
-        print("Dummy audio data created.")
+    # Load audio from file with av
+    container = av.open(audio_file)
+    audio = container.streams.audio[0]
+    print(audio)
 
-        # Run transcription
-        print("Running transcription...")
-        run_times = []
-        for _ in range(10):
-            start_time = time.time()
-            transcription = model.transcribe(dummy_audio)
-            end_time = time.time()
-            elapsed_time = end_time - start_time
-            run_times.append(elapsed_time)
-            print(f"Run {_ + 1}: Transcription took {elapsed_time:.3f} seconds.")
+    frame_generator = container.decode(audio)
 
-        avg_time = np.mean(run_times)
-        min_time = np.min(run_times)
-        max_time = np.max(run_times)
+    # Run transcription
+    print("Running transcription...")
+    run_times = []
+    samples_for_transcription = np.array([])
+    for i, frame in enumerate(frame_generator):
+        samples = get_samples_from_frame(frame)
+        # append the samples to the samples_for_transcription
+        samples_for_transcription = np.append(samples_for_transcription, samples)
 
-        print(f"\nStatistics over 10 runs:")
-        print(f"Average time: {avg_time:.3f} seconds")
-        print(f"Minimum time: {min_time:.3f} seconds")
-        print(f"Maximum time: {max_time:.3f} seconds")
+        # if there are less than 30 seconds of audio, append the samples and continue to the next frame
+        if len(samples_for_transcription) < 16000 * 30:
+            continue
 
-        print("Transcription completed.")
-        print("Transcription result:")
-        print(transcription)
+        start_time = time.time()
+        transcription = model.transcribe(samples_for_transcription)
+        end_time = time.time()
+        elapsed_time = end_time - start_time
+        run_times.append(elapsed_time)
+        print(f"Run {i + 1}: Transcription took {elapsed_time:.3f} seconds.")
+        for segment in transcription:
+            for j, tok in enumerate(segment.tokens):
+                print(f"Token {j}: {tok.text} ({tok.t0:.3f} - {tok.t1:.3f})")
+        # reset the samples_for_transcription
+        samples_for_transcription = np.array([])
 
-    except Exception as e:
-        print(f"An error occurred: {str(e)}")
+    avg_time = np.mean(run_times)
+    min_time = np.min(run_times)
+    max_time = np.max(run_times)
+
+    print(f"\nStatistics over runs:")
+    print(f"Average time: {avg_time:.3f} seconds")
+    print(f"Minimum time: {min_time:.3f} seconds")
+    print(f"Maximum time: {max_time:.3f} seconds")
+
+    print("Transcription completed.")
 
 
 def test_threaded_whisper():
@@ -97,8 +139,6 @@ def test_threaded_whisper():
     )
 
     # load audio from file with av
-    import av
-
     container = av.open(audio_file)
     audio = container.streams.audio[0]
     print(audio)
@@ -110,19 +150,7 @@ def test_threaded_whisper():
 
     for i, frame in enumerate(frame_generator):
         try:
-            # Read audio chunk
-            incoming_audio = frame.to_ndarray()
-            # check if stereo
-            if incoming_audio.shape[0] == 2:
-                incoming_audio = incoming_audio.mean(axis=0)
-            # check if the type is int16 or float32
-            if incoming_audio.dtype == np.int16:
-                incoming_audio = incoming_audio / 32768.0  # normalize to [-1, 1]
-            # resample to 16kHz if needed
-            if frame.rate != 16000:
-                samples = resampy.resample(incoming_audio, frame.rate, 16000)
-            else:
-                samples = incoming_audio
+            samples = get_samples_from_frame(frame)
 
             # Queue some audio (will get partial results until 10 seconds accumulate)
             chunk_id = model.queue_audio(samples)
@@ -140,5 +168,7 @@ def test_threaded_whisper():
 
 
 if __name__ == "__main__":
-    # test_simpler_whisper()
-    test_threaded_whisper()
+    if args.method == "regular":
+        test_simpler_whisper()
+    else:
+        test_threaded_whisper()

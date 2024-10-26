@@ -1,20 +1,42 @@
 import numpy as np
-from typing import Callable, List
+from typing import Callable, List, Union
 from . import _whisper_cpp
+from dataclasses import dataclass
+
+
+@dataclass
+class WhisperToken:
+    """A token from the Whisper model with timing and probability information."""
+
+    id: int
+    p: float
+    t0: int  # Start time in milliseconds
+    t1: int  # End time in milliseconds
+    text: str
+
+
+@dataclass
+class WhisperSegment:
+    """A segment of transcribed text with timing information and token details."""
+
+    text: str
+    start: int  # Start time in milliseconds
+    end: int  # End time in milliseconds
+    tokens: List[WhisperToken]
 
 
 class WhisperModel:
     def __init__(self, model_path: str, use_gpu=False):
         self.model = _whisper_cpp.WhisperModel(model_path, use_gpu)
 
-    def transcribe(self, audio):
+    def transcribe(self, audio: Union[np.ndarray, List[float]]) -> List[WhisperSegment]:
         # Ensure audio is a numpy array of float32
         audio = np.array(audio, dtype=np.float32)
 
         # Run inference
         transcription = self.model.transcribe(audio)
 
-        return " ".join(transcription)
+        return transcription
 
     def __del__(self):
         # Explicitly delete the C++ object
