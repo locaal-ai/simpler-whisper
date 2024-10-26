@@ -111,7 +111,8 @@ jobs:
         name_parts = base_name.split('-')
 
         # Insert acceleration and platform after the first part of the name
-        new_name_parts = name_parts[:1] + ['${{ matrix.acceleration }}', '${{ matrix.platform }}'] + [name_parts[1:]]
+        underscore_parts = [name_parts[0], '${{ matrix.acceleration }}', '${{ matrix.platform }}']
+        new_name_parts = ['_'.join(underscore_parts)] + [name_parts[1:]]
         new_name = '-'.join(new_name_parts)
 
         new_path = os.path.join('dist', new_name)
