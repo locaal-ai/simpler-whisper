@@ -48,7 +48,7 @@ class ThreadedWhisperModel:
     def __init__(
         self,
         model_path: str,
-        callback: Callable[[int, str, bool], None],
+        callback: Callable[[int, List[WhisperSegment], bool], None],
         use_gpu=False,
         max_duration_sec=10.0,
         sample_rate=16000,

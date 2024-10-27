@@ -1,3 +1,4 @@
+from typing import List
 import av
 import argparse
 import sys
@@ -10,6 +11,7 @@ import time
 import resampy
 
 from simpler_whisper.whisper import (
+    WhisperSegment,
     load_model,
     set_log_callback,
     LogLevel,
@@ -125,7 +127,8 @@ def test_simpler_whisper():
 def test_threaded_whisper():
     set_log_callback(my_log_callback)
 
-    def handle_result(chunk_id: int, text: str, is_partial: bool):
+    def handle_result(chunk_id: int, segments: List[WhisperSegment], is_partial: bool):
+        text = " ".join([seg.text for seg in segments])
         print(
             f"Chunk {chunk_id} results ({'partial' if is_partial else 'final'}): {text}"
         )

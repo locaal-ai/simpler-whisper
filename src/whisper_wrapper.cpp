@@ -119,6 +119,8 @@ public:
         {
             const char *text = whisper_full_get_segment_text(ctx, i);
             WhisperSegment segment;
+            segment.start = whisper_full_get_segment_t0(ctx, i);
+            segment.end = whisper_full_get_segment_t1(ctx, i);
             segment.text = std::string(text);
             const int n_tokens = whisper_full_n_tokens(ctx, i);
             for (int j = 0; j < n_tokens; ++j)
@@ -146,6 +148,7 @@ private:
     whisper_full_params params;
 };
 
+
 struct AudioChunk
 {
     std::vector<float> data;
@@ -155,25 +158,22 @@ struct AudioChunk
 struct TranscriptionResult
 {
     size_t chunk_id;
-    std::vector<std::string> segments;
     bool is_partial;
+    std::vector<WhisperSegment> segments;
 };
 
-class ThreadedWhisperModel
+
+class AsyncWhisperModel : public WhisperModel
 {
 public:
-    ThreadedWhisperModel(const std::string &model_path, bool use_gpu = false,
-                         float max_duration_sec = 10.0f, int sample_rate = 16000)
-        : running(false), next_chunk_id(0),
-          max_samples(static_cast<size_t>(max_duration_sec * sample_rate)),
-          current_chunk_id(0), model_path(model_path),
-          use_gpu(use_gpu)
+    AsyncWhisperModel(const std::string &model_path, bool use_gpu = false) :
+        WhisperModel(model_path, use_gpu), running(false), next_chunk_id(0), current_chunk_id(0)
     {
+        
     }
 
-    ~ThreadedWhisperModel()
+    ~AsyncWhisperModel()
     {
-        stop();
     }
 
     void start(py::function callback, int result_check_interval_ms = 100)
@@ -184,12 +184,17 @@ public:
         running = true;
         result_callback = callback;
 
-        process_thread = std::thread(&ThreadedWhisperModel::processThread, this);
-        result_thread = std::thread(&ThreadedWhisperModel::resultThread, this,
+        process_thread = std::thread(&AsyncWhisperModel::processThread, this);
+        result_thread = std::thread(&AsyncWhisperModel::resultThread, this,
                                     result_check_interval_ms);
     }
+    
+    void transcribe(py::array_t<float> audio)
+    {
+        this->queueAudio(audio);
+    }
 
-    void stop()
+    virtual void stop()
     {
         if (!running)
             return;
@@ -209,12 +214,6 @@ public:
             process_thread.join();
         if (result_thread.joinable())
             result_thread.join();
-
-        // Clear accumulated buffer
-        {
-            std::lock_guard<std::mutex> lock(buffer_mutex);
-            accumulated_buffer.clear();
-        }
     }
 
     size_t queueAudio(py::array_t<float> audio)
@@ -236,13 +235,69 @@ public:
         return chunk.id;
     }
 
+protected:
+
+    virtual void processThread() = 0;
+    virtual void resultThread(int check_interval_ms) = 0;
+
+    std::atomic<bool> running;
+    std::atomic<size_t> next_chunk_id;
+    size_t current_chunk_id;
+
+    std::thread process_thread;
+    std::thread result_thread;
+
+    std::queue<AudioChunk> input_queue;
+    std::mutex input_mutex;
+    std::condition_variable input_cv;
+
+    std::queue<TranscriptionResult> result_queue;
+    std::mutex result_mutex;
+    std::condition_variable result_cv;
+
+    py::function result_callback;
+
+};
+
+
+class ThreadedWhisperModel : public AsyncWhisperModel
+{
+public:
+    ThreadedWhisperModel(const std::string &model_path, bool use_gpu = false,
+                         float max_duration_sec = 10.0f, int sample_rate = 16000)
+        : AsyncWhisperModel(model_path, use_gpu),
+          max_samples(static_cast<size_t>(max_duration_sec * sample_rate))
+    {
+    }
+
+    ~ThreadedWhisperModel()
+    {
+        stop();
+    }
+
     void setMaxDuration(float max_duration_sec, int sample_rate = 16000)
     {
         max_samples = static_cast<size_t>(max_duration_sec * sample_rate);
     }
 
+    void start(py::function callback, int result_check_interval_ms = 100)
+    {
+        AsyncWhisperModel::start(callback, result_check_interval_ms);
+    }
+
+    void stop()
+    {
+        AsyncWhisperModel::stop();
+
+        // Clear accumulated buffer
+        {
+            std::lock_guard<std::mutex> lock(buffer_mutex);
+            accumulated_buffer.clear();
+        }
+    }
+
 private:
-    void processAccumulatedAudio(WhisperModel &model, bool force_final = false)
+    void processAccumulatedAudio(bool force_final = false)
     {
         std::vector<float> process_buffer;
         size_t current_id;
@@ -266,7 +321,7 @@ private:
         std::vector<WhisperSegment> segments;
         try
         {
-            segments = model.transcribe_raw_audio(process_buffer.data(), process_buffer.size());
+            segments = this->transcribe_raw_audio(process_buffer.data(), process_buffer.size());
         }
         catch (const std::exception &e)
         {
@@ -286,7 +341,7 @@ private:
         result.chunk_id = current_id;
         for (const auto &segment : segments)
         {
-            result.segments.push_back(segment.text);
+            result.segments.push_back(segment);
         }
         // Set partial flag based on whether this is a final result
         result.is_partial = !(force_final || process_buffer.size() >= max_samples);
@@ -301,8 +356,6 @@ private:
 
     void processThread()
     {
-        WhisperModel model(this->model_path, this->use_gpu);
-
         while (running)
         {
             AudioChunk all_chunks;
@@ -317,7 +370,7 @@ private:
                 if (!running)
                 {
                     // Process any remaining audio as final before shutting down
-                    processAccumulatedAudio(model, true);
+                    processAccumulatedAudio(true);
                     break;
                 }
 
@@ -346,7 +399,7 @@ private:
                 }
 
                 // Process the accumulated audio
-                processAccumulatedAudio(model, false);
+                processAccumulatedAudio(false);
             }
         }
     }
@@ -386,7 +439,7 @@ private:
                     std::string full_text;
                     for (const auto &segment : result.segments)
                     {
-                        full_text += segment;
+                        full_text += segment.text;
                     }
                     full_text = trim(full_text);
                     if (full_text.empty())
@@ -396,7 +449,7 @@ private:
                     {
                         try
                         {
-                            result_callback((int)result.chunk_id, py::str(full_text), result.is_partial);
+                            result_callback((int)result.chunk_id, result.segments, result.is_partial);
                         }
                         catch (const std::exception &e)
                         {
@@ -412,31 +465,10 @@ private:
         }
     }
 
-    whisper_context *ctx;
-    std::atomic<bool> running;
-    std::atomic<size_t> next_chunk_id;
-    size_t current_chunk_id;
-
     // Audio accumulation
     std::vector<float> accumulated_buffer;
     size_t max_samples;
     std::mutex buffer_mutex;
-
-    std::thread process_thread;
-    std::thread result_thread;
-
-    std::queue<AudioChunk> input_queue;
-    std::mutex input_mutex;
-    std::condition_variable input_cv;
-
-    std::queue<TranscriptionResult> result_queue;
-    std::mutex result_mutex;
-    std::condition_variable result_cv;
-
-    py::function result_callback;
-
-    std::string model_path;
-    bool use_gpu;
 };
 
 PYBIND11_MODULE(_whisper_cpp, m)
