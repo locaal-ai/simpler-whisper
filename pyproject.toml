@@ -34,3 +34,9 @@ packages = ["simpler_whisper"]
 
 [tool.setuptools.package-data]
 simpler_whisper = ["*.dll", "*.pyd", "*.so", "*.metal"]
+
+[tool.pytest]
+testpaths = ["tests"]
+python_files = "test_*.py"
+python_classes = "Test*"
+python_functions = "test_*"

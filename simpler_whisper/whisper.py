@@ -74,9 +74,9 @@ class AsyncWhisperModel:
         # Run async inference (no return value)
         return self.model.transcribe(audio)
 
-    def handle_result(self, chunk_id: int, text: str, is_partial: bool):
+    def handle_result(self, chunk_id: int, segments: List[WhisperSegment], is_partial: bool):
         if self.callback is not None:
-            self.callback(chunk_id, text, is_partial)
+            self.callback(chunk_id, segments, is_partial)
 
     def start(self, result_check_interval_ms=100):
         """
@@ -143,9 +143,9 @@ class ThreadedWhisperModel:
         self._is_running = False
         self.callback = callback
 
-    def handle_result(self, chunk_id: int, text: str, is_partial: bool):
+    def handle_result(self, chunk_id: int, segments: List[WhisperSegment], is_partial: bool):
         if self.callback is not None:
-            self.callback(chunk_id, text, is_partial)
+            self.callback(chunk_id, segments, is_partial)
 
     def start(self, result_check_interval_ms=100):
         """

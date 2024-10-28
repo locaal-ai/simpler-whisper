@@ -161,10 +161,11 @@ struct TranscriptionResult
     std::vector<WhisperSegment> segments;
 };
 
-class AsyncWhisperModel : public WhisperModel
+class AsyncWhisperModel
 {
 public:
-    AsyncWhisperModel(const std::string &model_path, bool use_gpu = false) : WhisperModel(model_path, use_gpu), running(false), next_chunk_id(0), current_chunk_id(0)
+    AsyncWhisperModel(const std::string &model_path, bool use_gpu = false) : model_path(model_path), use_gpu(use_gpu),
+                                                                             running(false), next_chunk_id(0), current_chunk_id(0)
     {
     }
 
@@ -243,40 +244,51 @@ public:
 protected:
     virtual void processThread()
     {
+        WhisperModel model(model_path, use_gpu);
+
         while (running)
         {
+            AudioChunk chunk;
             // Get next chunk from input queue
             {
                 std::unique_lock<std::mutex> lock(input_mutex);
-                input_cv.wait(lock, [this]
-                              { return !input_queue.empty() || !running; });
+                input_cv.wait_for(lock,
+                                  std::chrono::milliseconds(100),
+                                  [this]
+                                  { return !input_queue.empty() || !running; });
 
-                AudioChunk chunk = std::move(input_queue.front());
+                if (!running)
+                    break;
+
+                if (input_queue.empty())
+                    continue;
+
+                chunk = std::move(input_queue.front());
                 input_queue.pop();
+            }
 
-                // Process audio
-                TranscriptionResult result;
-                result.chunk_id = chunk.id;
-                result.is_partial = false;
-                try
-                {
-                    result.segments = this->transcribe_raw_audio(chunk.data.data(), chunk.data.size());
-                }
-                catch (const std::exception &e)
-                {
-                    std::cerr << "Exception during transcription: " << e.what() << std::endl;
-                }
-                catch (...)
-                {
-                    std::cerr << "Unknown exception during transcription" << std::endl;
-                }
+            // Process audio
+            TranscriptionResult result;
+            result.chunk_id = chunk.id;
+            result.is_partial = false;
+            try
+            {
+                result.segments = model.transcribe_raw_audio(chunk.data.data(), chunk.data.size());
+            }
+            catch (const std::exception &e)
+            {
+                std::cerr << "Exception during transcription: " << e.what() << std::endl;
+            }
+            catch (...)
+            {
+                std::cerr << "Unknown exception during transcription" << std::endl;
+            }
 
-                // Add result to output queue
-                {
-                    std::lock_guard<std::mutex> lock(result_mutex);
-                    result_queue.push(result);
-                    result_cv.notify_one();
-                }
+            // Add result to output queue
+            {
+                std::lock_guard<std::mutex> lock(result_mutex);
+                result_queue.push(result);
+                result_cv.notify_one();
             }
         }
     }
@@ -342,6 +354,9 @@ protected:
         }
     }
 
+    std::string model_path;
+    bool use_gpu;
+
     std::atomic<bool> running;
     std::atomic<size_t> next_chunk_id;
     size_t current_chunk_id;
@@ -397,7 +412,7 @@ public:
     }
 
 private:
-    void processAccumulatedAudio(bool force_final = false)
+    void processAccumulatedAudio(WhisperModel &model, bool force_final = false)
     {
         std::vector<float> process_buffer;
         size_t current_id;
@@ -421,7 +436,7 @@ private:
         std::vector<WhisperSegment> segments;
         try
         {
-            segments = this->transcribe_raw_audio(process_buffer.data(), process_buffer.size());
+            segments = model.transcribe_raw_audio(process_buffer.data(), process_buffer.size());
         }
         catch (const std::exception &e)
         {
@@ -456,6 +471,8 @@ private:
 
     void processThread() override
     {
+        WhisperModel model(model_path, use_gpu);
+
         while (running)
         {
             AudioChunk all_chunks;
@@ -470,7 +487,7 @@ private:
                 if (!running)
                 {
                     // Process any remaining audio as final before shutting down
-                    processAccumulatedAudio(true);
+                    processAccumulatedAudio(model, true);
                     break;
                 }
 
@@ -499,7 +516,7 @@ private:
                 }
 
                 // Process the accumulated audio
-                processAccumulatedAudio(false);
+                processAccumulatedAudio(model, false);
             }
         }
     }
