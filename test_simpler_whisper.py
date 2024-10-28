@@ -2,20 +2,21 @@ from typing import List
 import av
 import argparse
 import sys
+import numpy as np
+import time
+import resampy
+import librosa
 
 # Remove the current directory from sys.path to avoid conflicts with the installed package
 sys.path.pop(0)
 
-import numpy as np
-import time
-import resampy
-
 from simpler_whisper.whisper import (
     WhisperSegment,
-    load_model,
     set_log_callback,
     LogLevel,
+    WhisperModel,
     ThreadedWhisperModel,
+    AsyncWhisperModel,
 )
 
 
@@ -36,7 +37,7 @@ parser.add_argument("audio_file", type=str, help="Path to the audio file")
 parser.add_argument(
     "method",
     type=str,
-    choices=["regular", "threaded"],
+    choices=["regular", "threaded", "async"],
     help="The method to use for testing the model",
 )
 args = parser.parse_args()
@@ -77,7 +78,7 @@ def test_simpler_whisper():
 
     # Load the model
     print("Loading the Whisper model...")
-    model = load_model(model_path, use_gpu=True)
+    model = WhisperModel(model_path, use_gpu=True)
     print("Model loaded successfully!")
 
     # Load audio from file with av
@@ -122,6 +123,55 @@ def test_simpler_whisper():
     print(f"Maximum time: {max_time:.3f} seconds")
 
     print("Transcription completed.")
+
+
+def test_async_whisper():
+    set_log_callback(my_log_callback)
+    chunk_ids = []
+
+    def handle_result(chunk_id: int, segments: List[WhisperSegment], is_partial: bool):
+        text = " ".join([seg.text for seg in segments])
+        print(
+            f"Chunk {chunk_id} results ({'partial' if is_partial else 'final'}): {text}"
+        )
+        # remove the chunk_id from the list of chunk_ids
+        chunk_ids.remove(chunk_id)
+
+    # Create model
+    model = AsyncWhisperModel(
+        model_path=model_path, callback=handle_result, use_gpu=True
+    )
+
+    print("Loading audio from file...")
+    # Load audio from file with librosa
+    audio_data, sample_rate = librosa.load(audio_file, sr=16000)
+
+    # Start processing with callback
+    print("Starting Whisper model")
+    model.start()
+
+    # create 30-seconds chunks of audio_data
+    for i in range(0, len(audio_data), 16000 * 30):
+        try:
+            samples_for_transcription = audio_data[i : i + 16000 * 30]
+
+            # Queue the chunk for processing
+            chunk_id = model.transcribe(samples_for_transcription)
+            chunk_ids.append(chunk_id)
+            print(f"Queued chunk {chunk_id}")
+
+            # reset
+            samples_for_transcription = np.array([])
+        except:
+            break
+
+    # wait for all chunks to finish processing
+    while len(chunk_ids) > 0:
+        time.sleep(0.1)
+
+    # When done
+    print("Stopping Whisper model")
+    model.stop()
 
 
 def test_threaded_whisper():
@@ -173,5 +223,7 @@ def test_threaded_whisper():
 if __name__ == "__main__":
     if args.method == "regular":
         test_simpler_whisper()
+    elif args.method == "async":
+        test_async_whisper()
     else:
         test_threaded_whisper()

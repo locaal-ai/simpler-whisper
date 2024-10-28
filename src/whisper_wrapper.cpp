@@ -148,7 +148,6 @@ private:
     whisper_full_params params;
 };
 
-
 struct AudioChunk
 {
     std::vector<float> data;
@@ -162,14 +161,11 @@ struct TranscriptionResult
     std::vector<WhisperSegment> segments;
 };
 
-
 class AsyncWhisperModel : public WhisperModel
 {
 public:
-    AsyncWhisperModel(const std::string &model_path, bool use_gpu = false) :
-        WhisperModel(model_path, use_gpu), running(false), next_chunk_id(0), current_chunk_id(0)
+    AsyncWhisperModel(const std::string &model_path, bool use_gpu = false) : WhisperModel(model_path, use_gpu), running(false), next_chunk_id(0), current_chunk_id(0)
     {
-        
     }
 
     ~AsyncWhisperModel()
@@ -188,10 +184,19 @@ public:
         result_thread = std::thread(&AsyncWhisperModel::resultThread, this,
                                     result_check_interval_ms);
     }
-    
-    void transcribe(py::array_t<float> audio)
+
+    /**
+     * @brief Transcribes the given audio data.
+     *
+     * This function takes an audio input in the form of a py::array_t<float> and
+     * processes it by queuing the audio for transcription.
+     *
+     * @param audio A py::array_t<float> containing the audio data to be transcribed.
+     * @return size_t The queued chunk ID.
+     */
+    size_t transcribe(py::array_t<float> audio)
     {
-        this->queueAudio(audio);
+        return this->queueAudio(audio);
     }
 
     virtual void stop()
@@ -236,9 +241,106 @@ public:
     }
 
 protected:
+    virtual void processThread()
+    {
+        while (running)
+        {
+            // Get next chunk from input queue
+            {
+                std::unique_lock<std::mutex> lock(input_mutex);
+                input_cv.wait(lock, [this]
+                              { return !input_queue.empty() || !running; });
 
-    virtual void processThread() = 0;
-    virtual void resultThread(int check_interval_ms) = 0;
+                AudioChunk chunk = std::move(input_queue.front());
+                input_queue.pop();
+
+                // Process audio
+                TranscriptionResult result;
+                result.chunk_id = chunk.id;
+                result.is_partial = false;
+                try
+                {
+                    result.segments = this->transcribe_raw_audio(chunk.data.data(), chunk.data.size());
+                }
+                catch (const std::exception &e)
+                {
+                    std::cerr << "Exception during transcription: " << e.what() << std::endl;
+                }
+                catch (...)
+                {
+                    std::cerr << "Unknown exception during transcription" << std::endl;
+                }
+
+                // Add result to output queue
+                {
+                    std::lock_guard<std::mutex> lock(result_mutex);
+                    result_queue.push(result);
+                    result_cv.notify_one();
+                }
+            }
+        }
+    }
+
+    void resultThread(int check_interval_ms)
+    {
+        while (running)
+        {
+            std::vector<TranscriptionResult> results;
+
+            {
+                std::unique_lock<std::mutex> lock(result_mutex);
+                result_cv.wait_for(lock,
+                                   std::chrono::milliseconds(check_interval_ms),
+                                   [this]
+                                   { return !result_queue.empty() || !running; });
+
+                if (!running && result_queue.empty())
+                    break;
+
+                while (!result_queue.empty())
+                {
+                    results.push_back(std::move(result_queue.front()));
+                    result_queue.pop();
+                }
+            }
+
+            if (!results.empty())
+            {
+                py::gil_scoped_acquire gil;
+                for (const auto &result : results)
+                {
+                    if (result.segments.empty())
+                        continue;
+
+                    // concatenate segments into a single string
+                    std::string full_text;
+                    for (const auto &segment : result.segments)
+                    {
+                        full_text += segment.text;
+                    }
+                    full_text = trim(full_text);
+                    if (full_text.empty())
+                        continue;
+
+                    if (result_callback)
+                    {
+                        try
+                        {
+                            result_callback((int)result.chunk_id, result.segments, result.is_partial);
+                        }
+                        catch (const std::exception &e)
+                        {
+                            std::cerr << "Exception in result callback: " << e.what() << std::endl;
+                        }
+                        catch (...)
+                        {
+                            std::cerr << "Unknown exception in result callback" << std::endl;
+                        }
+                    }
+                }
+            }
+        }
+    }
 
     std::atomic<bool> running;
     std::atomic<size_t> next_chunk_id;
@@ -256,9 +358,7 @@ protected:
     std::condition_variable result_cv;
 
     py::function result_callback;
-
 };
-
 
 class ThreadedWhisperModel : public AsyncWhisperModel
 {
@@ -354,7 +454,7 @@ private:
         }
     }
 
-    void processThread()
+    void processThread() override
     {
         while (running)
         {
@@ -404,67 +504,6 @@ private:
         }
     }
 
-    void resultThread(int check_interval_ms)
-    {
-        while (running)
-        {
-            std::vector<TranscriptionResult> results;
-
-            {
-                std::unique_lock<std::mutex> lock(result_mutex);
-                result_cv.wait_for(lock,
-                                   std::chrono::milliseconds(check_interval_ms),
-                                   [this]
-                                   { return !result_queue.empty() || !running; });
-
-                if (!running && result_queue.empty())
-                    break;
-
-                while (!result_queue.empty())
-                {
-                    results.push_back(std::move(result_queue.front()));
-                    result_queue.pop();
-                }
-            }
-
-            if (!results.empty())
-            {
-                py::gil_scoped_acquire gil;
-                for (const auto &result : results)
-                {
-                    if (result.segments.empty())
-                        continue;
-
-                    // concatenate segments into a single string
-                    std::string full_text;
-                    for (const auto &segment : result.segments)
-                    {
-                        full_text += segment.text;
-                    }
-                    full_text = trim(full_text);
-                    if (full_text.empty())
-                        continue;
-
-                    if (result_callback)
-                    {
-                        try
-                        {
-                            result_callback((int)result.chunk_id, result.segments, result.is_partial);
-                        }
-                        catch (const std::exception &e)
-                        {
-                            std::cerr << "Exception in result callback: " << e.what() << std::endl;
-                        }
-                        catch (...)
-                        {
-                            std::cerr << "Unknown exception in result callback" << std::endl;
-                        }
-                    }
-                }
-            }
-        }
-    }
-
     // Audio accumulation
     std::vector<float> accumulated_buffer;
     size_t max_samples;
@@ -506,6 +545,16 @@ PYBIND11_MODULE(_whisper_cpp, m)
     py::class_<WhisperModel>(m, "WhisperModel")
         .def(py::init<const std::string &, bool>())
         .def("transcribe", &WhisperModel::transcribe);
+
+    // Expose asynchronous model
+    py::class_<AsyncWhisperModel>(m, "AsyncWhisperModel")
+        .def(py::init<const std::string &, bool>())
+        .def("start", &AsyncWhisperModel::start,
+             py::arg("callback"),
+             py::arg("result_check_interval_ms") = 100)
+        .def("stop", &AsyncWhisperModel::stop)
+        .def("transcribe", &AsyncWhisperModel::transcribe)
+        .def("queue_audio", &AsyncWhisperModel::queueAudio);
 
     py::class_<ThreadedWhisperModel>(m, "ThreadedWhisperModel")
         .def(py::init<const std::string &, bool, float, int>(),
