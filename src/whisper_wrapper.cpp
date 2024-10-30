@@ -91,13 +91,19 @@ public:
 
     py::list transcribe(py::array_t<float> audio)
     {
+        py::list result;
+        // Check if input is empty
+        if (audio.is_none() || audio.size() == 0)
+        {
+            return result;
+        }
+
         auto audio_buffer = audio.request();
         float *audio_data = static_cast<float *>(audio_buffer.ptr);
         int n_samples = audio_buffer.size;
 
         std::vector<WhisperSegment> segments = transcribe_raw_audio(audio_data, n_samples);
 
-        py::list result;
         for (const auto &segment : segments)
         {
             result.append(py::cast(segment));
@@ -400,7 +406,7 @@ public:
         AsyncWhisperModel::start(callback, result_check_interval_ms);
     }
 
-    void stop()
+    void stop() override
     {
         AsyncWhisperModel::stop();
 

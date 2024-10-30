@@ -14,7 +14,7 @@ jobs:
       matrix:
         os: ['windows-latest', 'macos-latest', 'ubuntu-latest']
         python-version: ['3.11', '3.12']
-        platform: ['x86_64', 'arm64', 'win64']
+        platform: ['x86_64', 'win64']
         acceleration: ['cpu', 'cuda', 'hipblas', 'vulkan']
         exclude:
           - os: windows-latest
@@ -32,8 +32,6 @@ jobs:
           - os: ubuntu-latest
             platform: win64
           - os: ubuntu-latest
-            platform: arm64
-          - os: ubuntu-latest
             acceleration: cuda
           - os: ubuntu-latest
             acceleration: hipblas
@@ -45,25 +43,10 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - name: Set up Python Non-Mac
-      if: ${{ matrix.os != 'macos-latest' }}
+    - name: Set up Python
       uses: actions/setup-python@v5
       with:
         python-version: ${{ matrix.python-version }}
-
-    - name: Set up Python Mac arm64
-      if: ${{ matrix.os == 'macos-latest' && matrix.platform == 'arm64' }}
-      uses: actions/setup-python@v5
-      with:
-        python-version: ${{ matrix.python-version }}
-        architecture: 'arm64'
-
-    - name: Set up Python Mac x86_64
-      if: ${{ matrix.os == 'macos-latest' && matrix.platform == 'x86_64' }}
-      uses: actions/setup-python@v5
-      with:
-        python-version: ${{ matrix.python-version }}
-        architecture: 'x64'
 
     - name: Install dependencies
       run: |

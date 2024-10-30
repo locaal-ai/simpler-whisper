@@ -167,7 +167,10 @@ def test_async_whisper():
 
     # wait for all chunks to finish processing
     while len(chunk_ids) > 0:
-        time.sleep(0.1)
+        try:
+            time.sleep(0.1)
+        except:
+            break
 
     # When done
     print("Stopping Whisper model")
