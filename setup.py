@@ -5,6 +5,7 @@ import os
 import subprocess
 import platform
 import sysconfig
+from wheel.bdist_wheel import bdist_wheel
 
 
 class CMakeExtension(Extension):
@@ -99,8 +100,15 @@ class CMakeBuild(build_ext):
         )
 
 
-acceleration = os.getenv("SIMPLER_WHISPER_ACCELERATION", "")
-build_tag = acceleration if acceleration else ""
+class CustomBdistWheel(bdist_wheel):
+    def get_tag(self):
+        python, abi, platform = super().get_tag()
+        acceleration = os.environ.get("SIMPLER_WHISPER_ACCELERATION", "")
+        if acceleration:
+            # This creates the +cuda or +cpu tag
+            self.distribution.version += f"+{acceleration}"
+        return python, abi, platform
+
 
 setup(
     name="simpler-whisper",
@@ -110,10 +118,12 @@ setup(
     description="A simple Python wrapper for whisper.cpp",
     long_description="A simple Python wrapper for whisper.cpp",
     ext_modules=[CMakeExtension("simpler_whisper._whisper_cpp")],
-    cmdclass=dict(build_ext=CMakeBuild),
+    cmdclass={
+        "build_ext": CMakeBuild,
+        "bdist_wheel": CustomBdistWheel,
+    },
     zip_safe=False,
     packages=[
         "simpler_whisper"
     ],  # Add this line to ensure the package directory is created
-    options={"bdist_wheel": {"build_tag": build_tag}},
 )
