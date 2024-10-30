@@ -5,6 +5,7 @@ import os
 import subprocess
 import platform
 import sysconfig
+from wheel.bdist_wheel import bdist_wheel
 
 
 class CMakeExtension(Extension):
@@ -56,12 +57,14 @@ class CMakeBuild(build_ext):
         # Add platform-specific arguments
         if platform.system() == "Darwin":  # macOS
             cmake_args += [
-                f"-DCMAKE_OSX_ARCHITECTURES={target_platform}",
+                f"-DCMAKE_OSX_ARCHITECTURES=arm64;x86_64",
                 "-DCMAKE_BUILD_WITH_INSTALL_RPATH=ON",
                 "-DCMAKE_INSTALL_RPATH_USE_LINK_PATH=ON",
                 f"-DCMAKE_INSTALL_NAME_DIR=@rpath",
             ]
-            env["MACOS_ARCH"] = target_platform
+            # Remove the MACOS_ARCH environment variable as we're building universal
+            if "MACOS_ARCH" in env:
+                del env["MACOS_ARCH"]
 
         cfg = "Debug" if self.debug else "Release"
         build_args = ["--config", cfg]
@@ -97,15 +100,30 @@ class CMakeBuild(build_ext):
         )
 
 
+class CustomBdistWheel(bdist_wheel):
+    def get_tag(self):
+        python, abi, platform = super().get_tag()
+        acceleration = os.environ.get("SIMPLER_WHISPER_ACCELERATION", "")
+        if acceleration:
+            # Store original version
+            orig_version = self.distribution.get_version()
+            # Temporarily modify version
+            self.distribution.metadata.version = f"{orig_version}+{acceleration}"
+        return python, abi, platform
+
+
 setup(
     name="simpler-whisper",
-    version="0.2.1",
+    version="0.2.2",
     author="Roy Shilkrot",
     author_email="roy.shil@gmail.com",
     description="A simple Python wrapper for whisper.cpp",
-    long_description="",
+    long_description="A simple Python wrapper for whisper.cpp",
     ext_modules=[CMakeExtension("simpler_whisper._whisper_cpp")],
-    cmdclass=dict(build_ext=CMakeBuild),
+    cmdclass={
+        "build_ext": CMakeBuild,
+        "bdist_wheel": CustomBdistWheel,
+    },
     zip_safe=False,
     packages=[
         "simpler_whisper"
