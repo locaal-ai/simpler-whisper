@@ -1,6 +1,13 @@
 include(ExternalProject)
 include(FetchContent)
 
+if(UNIX AND NOT APPLE)
+  find_package(OpenMP REQUIRED)
+  # Set compiler flags for OpenMP
+  set(WHISPER_EXTRA_CXX_FLAGS "${WHISPER_EXTRA_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
+  set(WHISPER_EXTRA_C_FLAGS "${WHISPER_EXTRA_CXX_FLAGS} ${OpenMP_C_FLAGS}")
+endif()
+
 set(PREBUILT_WHISPERCPP_VERSION "0.0.7")
 set(PREBUILT_WHISPERCPP_URL_BASE
     "https://github.com/locaal-ai/occ-ai-dep-whispercpp/releases/download/${PREBUILT_WHISPERCPP_VERSION}"
@@ -177,6 +184,11 @@ else()
   set(WHISPER_ADDITIONAL_CMAKE_ARGS -DWHISPER_BLAS=OFF -DWHISPER_CUBLAS=OFF
                                     -DWHISPER_OPENBLAS=OFF)
 
+  find_package(OpenMP REQUIRED)
+  # Set compiler flags for OpenMP
+  set(WHISPER_EXTRA_CXX_FLAGS "${WHISPER_EXTRA_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
+  set(WHISPER_EXTRA_C_FLAGS "${WHISPER_EXTRA_CXX_FLAGS} ${OpenMP_C_FLAGS}")
+
   # On Linux build a static Whisper library
   ExternalProject_Add(
     Whispercpp_Build
@@ -201,8 +213,9 @@ else()
       -DCMAKE_OSX_DEPLOYMENT_TARGET=10.13
       -DCMAKE_OSX_ARCHITECTURES=${CMAKE_OSX_ARCHITECTURES_}
       -DCMAKE_CXX_FLAGS=${WHISPER_EXTRA_CXX_FLAGS}
-      -DCMAKE_C_FLAGS=${WHISPER_EXTRA_CXX_FLAGS} -DBUILD_SHARED_LIBS=OFF
+      -DCMAKE_C_FLAGS=${WHISPER_EXTRA_C_FLAGS} -DBUILD_SHARED_LIBS=OFF
       -DWHISPER_BUILD_TESTS=OFF -DWHISPER_BUILD_EXAMPLES=OFF
+      -DWHISPER_USE_OPENMP=ON # Enable OpenMP explicitly
       ${WHISPER_ADDITIONAL_CMAKE_ARGS})
 
   ExternalProject_Get_Property(Whispercpp_Build INSTALL_DIR)
@@ -225,6 +238,11 @@ else()
   set_target_properties(
     Whispercpp::Whisper PROPERTIES INTERFACE_INCLUDE_DIRECTORIES
                                    ${INSTALL_DIR}/include)
+  set_property(
+    TARGET Whispercpp::Whisper
+    APPEND
+    PROPERTY INTERFACE_LINK_LIBRARIES OpenMP::OpenMP_CXX)
+
 endif()
 
 add_library(Whispercpp INTERFACE)
@@ -239,3 +257,6 @@ if(APPLE)
     INTERFACE "-framework Accelerate -framework CoreML -framework Metal")
   target_link_libraries(Whispercpp INTERFACE Whispercpp::CoreML)
 endif(APPLE)
+if(UNIX AND NOT APPLE)
+  target_link_libraries(Whispercpp INTERFACE OpenMP::OpenMP_CXX)
+endif()
