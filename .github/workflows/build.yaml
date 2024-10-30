@@ -76,25 +76,6 @@ jobs:
       run: |
         python -c "import sys; sys.path.pop(0); import simpler_whisper; print(simpler_whisper.__file__)"
 
-    - name: Rename wheel file
-      shell: python
-      run: |
-        import os
-        import glob
-
-        wheel_file = glob.glob('dist/*.whl')[0]
-        base_name = os.path.basename(wheel_file)
-        name_parts = base_name.split('-')
-
-        # Insert acceleration and platform after the first part of the name
-        underscore_parts = [name_parts[0], '${{ matrix.acceleration }}', '${{ matrix.platform }}']
-        new_name_parts = ['_'.join(underscore_parts)] + name_parts[1:]
-        new_name = '-'.join(new_name_parts)
-
-        new_path = os.path.join('dist', new_name)
-        os.rename(wheel_file, new_path)
-        print(f"Renamed {base_name} to {new_name}")
-
     - name: Set wheel name
       shell: pwsh
       run: |

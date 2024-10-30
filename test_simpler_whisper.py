@@ -64,6 +64,8 @@ def get_samples_from_frame(frame: av.AudioFrame) -> np.ndarray:
     # check if the type is int16 or float32
     if incoming_audio.dtype == np.int16:
         incoming_audio = incoming_audio / 32768.0  # normalize to [-1, 1]
+    if incoming_audio.dtype == np.int32:
+        incoming_audio = incoming_audio / 2147483648.0  # normalize to [-1, 1]
     # resample to 16kHz if needed
     if frame.rate != 16000:
         samples = resampy.resample(incoming_audio, frame.rate, 16000)

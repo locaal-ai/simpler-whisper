@@ -99,17 +99,21 @@ class CMakeBuild(build_ext):
         )
 
 
+acceleration = os.getenv("SIMPLER_WHISPER_ACCELERATION", "")
+build_tag = acceleration if acceleration else ""
+
 setup(
     name="simpler-whisper",
     version="0.2.2",
     author="Roy Shilkrot",
     author_email="roy.shil@gmail.com",
     description="A simple Python wrapper for whisper.cpp",
-    long_description="",
+    long_description="A simple Python wrapper for whisper.cpp",
     ext_modules=[CMakeExtension("simpler_whisper._whisper_cpp")],
     cmdclass=dict(build_ext=CMakeBuild),
     zip_safe=False,
     packages=[
         "simpler_whisper"
     ],  # Add this line to ensure the package directory is created
+    options={"bdist_wheel": {"build_tag": build_tag}},
 )
