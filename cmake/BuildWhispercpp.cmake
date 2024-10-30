@@ -6,46 +6,81 @@ set(PREBUILT_WHISPERCPP_URL_BASE
     "https://github.com/locaal-ai/occ-ai-dep-whispercpp/releases/download/${PREBUILT_WHISPERCPP_VERSION}")
 
 if(APPLE)
-  # check the "MACOS_ARCH" env var to figure out if this is x86 or arm64
-  if($ENV{MACOS_ARCH} STREQUAL "x86_64")
-    set(WHISPER_CPP_HASH "dc7fd5ff9c7fbb8623f8e14d9ff2872186cab4cd7a52066fcb2fab790d6092fc")
-  elseif($ENV{MACOS_ARCH} STREQUAL "arm64")
-    set(WHISPER_CPP_HASH "ebed595ee431b182261bce41583993b149eed539e15ebf770d98a6bc85d53a92")
-  else()
-    message(
-      FATAL_ERROR
-        "The MACOS_ARCH environment variable is not set to a valid value. Please set it to either `x86_64` or `arm64`")
-  endif()
-  set(WHISPER_CPP_URL
-      "${PREBUILT_WHISPERCPP_URL_BASE}/whispercpp-macos-$ENV{MACOS_ARCH}-${PREBUILT_WHISPERCPP_VERSION}.tar.gz")
+  # Store source directories for each architecture
+  foreach(MACOS_ARCH IN ITEMS "x86_64" "arm64")
+    if(${MACOS_ARCH} STREQUAL "x86_64")
+      set(WHISPER_CPP_HASH "dc7fd5ff9c7fbb8623f8e14d9ff2872186cab4cd7a52066fcb2fab790d6092fc")
+    elseif(${MACOS_ARCH} STREQUAL "arm64")
+      set(WHISPER_CPP_HASH "ebed595ee431b182261bce41583993b149eed539e15ebf770d98a6bc85d53a92")
+    endif()
+    
+    set(WHISPER_CPP_URL
+        "${PREBUILT_WHISPERCPP_URL_BASE}/whispercpp-macos-${MACOS_ARCH}-${PREBUILT_WHISPERCPP_VERSION}.tar.gz")
 
-  FetchContent_Declare(
-    whispercpp_fetch
-    URL ${WHISPER_CPP_URL}
-    URL_HASH SHA256=${WHISPER_CPP_HASH})
-  FetchContent_MakeAvailable(whispercpp_fetch)
+    # Use unique names for each architecture's fetch
+    FetchContent_Declare(
+      whispercpp_fetch_${MACOS_ARCH}
+      URL ${WHISPER_CPP_URL}
+      URL_HASH SHA256=${WHISPER_CPP_HASH})
+    FetchContent_MakeAvailable(whispercpp_fetch_${MACOS_ARCH})
+    
+    # Store the source dir for each arch
+    if(${MACOS_ARCH} STREQUAL "x86_64")
+      set(WHISPER_X86_64_DIR ${whispercpp_fetch_x86_64_SOURCE_DIR})
+    else()
+      set(WHISPER_ARM64_DIR ${whispercpp_fetch_arm64_SOURCE_DIR})
+    endif()
+  endforeach()
 
+  # Create a directory for the universal binaries
+  set(UNIVERSAL_LIB_DIR ${CMAKE_BINARY_DIR}/universal/lib)
+  file(MAKE_DIRECTORY ${UNIVERSAL_LIB_DIR})
+
+  # Create universal binaries using lipo
+  execute_process(
+    COMMAND lipo -create 
+      "${WHISPER_X86_64_DIR}/lib/libwhisper.a"
+      "${WHISPER_ARM64_DIR}/lib/libwhisper.a"
+      -output "${UNIVERSAL_LIB_DIR}/libwhisper.a"
+  )
+  
+  execute_process(
+    COMMAND lipo -create 
+      "${WHISPER_X86_64_DIR}/lib/libggml.a"
+      "${WHISPER_ARM64_DIR}/lib/libggml.a"
+      -output "${UNIVERSAL_LIB_DIR}/libggml.a"
+  )
+
+  execute_process(
+    COMMAND lipo -create 
+      "${WHISPER_X86_64_DIR}/lib/libwhisper.coreml.a"
+      "${WHISPER_ARM64_DIR}/lib/libwhisper.coreml.a"
+      -output "${UNIVERSAL_LIB_DIR}/libwhisper.coreml.a"
+  )
+
+  # Set up the imported libraries to use the universal binaries
   add_library(Whispercpp::Whisper STATIC IMPORTED)
   set_target_properties(
     Whispercpp::Whisper
     PROPERTIES IMPORTED_LOCATION
-               ${whispercpp_fetch_SOURCE_DIR}/lib/${CMAKE_STATIC_LIBRARY_PREFIX}whisper${CMAKE_STATIC_LIBRARY_SUFFIX})
-  set_target_properties(Whispercpp::Whisper PROPERTIES INTERFACE_INCLUDE_DIRECTORIES
-                                                       ${whispercpp_fetch_SOURCE_DIR}/include)
+                "${UNIVERSAL_LIB_DIR}/libwhisper.a")
+  set_target_properties(Whispercpp::Whisper PROPERTIES 
+    INTERFACE_INCLUDE_DIRECTORIES ${WHISPER_ARM64_DIR}/include)  # Either arch's include dir is fine
+
   add_library(Whispercpp::GGML STATIC IMPORTED)
   set_target_properties(
     Whispercpp::GGML
     PROPERTIES IMPORTED_LOCATION
-               ${whispercpp_fetch_SOURCE_DIR}/lib/${CMAKE_STATIC_LIBRARY_PREFIX}ggml${CMAKE_STATIC_LIBRARY_SUFFIX})
+                "${UNIVERSAL_LIB_DIR}/libggml.a")
 
   add_library(Whispercpp::CoreML STATIC IMPORTED)
   set_target_properties(
     Whispercpp::CoreML
-    PROPERTIES
-      IMPORTED_LOCATION
-      ${whispercpp_fetch_SOURCE_DIR}/lib/${CMAKE_STATIC_LIBRARY_PREFIX}whisper.coreml${CMAKE_STATIC_LIBRARY_SUFFIX})
+    PROPERTIES IMPORTED_LOCATION
+                "${UNIVERSAL_LIB_DIR}/libwhisper.coreml.a")
 
-  set(WHISPER_ADDITIONAL_FILES ${whispercpp_fetch_SOURCE_DIR}/bin/ggml-metal.metal)
+  # Copy the metal file from either architecture (they should be identical)
+  set(WHISPER_ADDITIONAL_FILES ${WHISPER_ARM64_DIR}/bin/ggml-metal.metal)  set(WHISPER_ADDITIONAL_FILES ${whispercpp_fetch_SOURCE_DIR}/bin/ggml-metal.metal)
 elseif(WIN32)
   if(NOT DEFINED ACCELERATION)
     message(FATAL_ERROR "ACCELERATION is not set. Please set it to either `cpu`, `cuda`, `vulkan` or `hipblas`")

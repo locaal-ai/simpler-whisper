@@ -56,12 +56,14 @@ class CMakeBuild(build_ext):
         # Add platform-specific arguments
         if platform.system() == "Darwin":  # macOS
             cmake_args += [
-                f"-DCMAKE_OSX_ARCHITECTURES={target_platform}",
+                f"-DCMAKE_OSX_ARCHITECTURES=arm64;x86_64",
                 "-DCMAKE_BUILD_WITH_INSTALL_RPATH=ON",
                 "-DCMAKE_INSTALL_RPATH_USE_LINK_PATH=ON",
                 f"-DCMAKE_INSTALL_NAME_DIR=@rpath",
             ]
-            env["MACOS_ARCH"] = target_platform
+            # Remove the MACOS_ARCH environment variable as we're building universal
+            if "MACOS_ARCH" in env:
+                del env["MACOS_ARCH"]
 
         cfg = "Debug" if self.debug else "Release"
         build_args = ["--config", cfg]
