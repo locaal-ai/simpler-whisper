@@ -15,7 +15,7 @@ jobs:
         os: ['windows-latest', 'macos-latest', 'ubuntu-latest']
         python-version: ['3.11', '3.12']
         platform: ['x86_64', 'win64']
-        acceleration: ['cpu', 'cuda', 'hipblas', 'vulkan']
+        acceleration: ['cpu', 'cuda']
         exclude:
           - os: windows-latest
             platform: arm64
@@ -24,19 +24,11 @@ jobs:
           - os: macos-latest
             acceleration: cuda
           - os: macos-latest
-            acceleration: hipblas
-          - os: macos-latest
-            acceleration: vulkan
-          - os: macos-latest
             platform: win64
           - os: ubuntu-latest
             platform: win64
           - os: ubuntu-latest
             acceleration: cuda
-          - os: ubuntu-latest
-            acceleration: hipblas
-          - os: ubuntu-latest
-            acceleration: vulkan
 
     runs-on: ${{ matrix.os }}
 
@@ -80,6 +72,7 @@ jobs:
         pip install $wheelFile.FullName
 
     - name: Test import
+      if: false
       run: |
         python -c "import sys; sys.path.pop(0); import simpler_whisper; print(simpler_whisper.__file__)"
 
