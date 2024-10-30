@@ -81,7 +81,7 @@ jobs:
 
     - name: Test import
       run: |
-        python -c "import simpler_whisper; print(simpler_whisper.__file__)"
+        python -c "import sys; sys.path.pop(0); import simpler_whisper; print(simpler_whisper.__file__)"
 
     - name: Rename wheel file
       shell: python
