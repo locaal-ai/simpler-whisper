@@ -105,8 +105,10 @@ class CustomBdistWheel(bdist_wheel):
         python, abi, platform = super().get_tag()
         acceleration = os.environ.get("SIMPLER_WHISPER_ACCELERATION", "")
         if acceleration:
-            # This creates the +cuda or +cpu tag
-            self.distribution.version += f"+{acceleration}"
+            # Store original version
+            orig_version = self.distribution.get_version()
+            # Temporarily modify version
+            self.distribution.metadata.version = f"{orig_version}+{acceleration}"
         return python, abi, platform
 
 
