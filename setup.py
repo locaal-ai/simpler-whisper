@@ -38,7 +38,7 @@ class CMakeBuild(build_ext):
 
         # Get acceleration and platform from environment variables
         acceleration = os.environ.get("SIMPLER_WHISPER_ACCELERATION", "cpu")
-        target_platform = os.environ.get("SIMPLER_WHISPER_PLATFORM", platform.machine())
+        target_platform = platform.machine()
         python_version = f"{sys.version_info.major}.{sys.version_info.minor}"
 
         cmake_args = [
