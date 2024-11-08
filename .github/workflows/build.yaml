@@ -60,8 +60,12 @@ jobs:
       run: |
         docker run --rm -v $(pwd):/io quay.io/pypa/manylinux2014_x86_64 bash -c "
         cd /io &&
-        yum install -y python3-devel &&
         PY_VERSION=${{ matrix.python-version == '3.11' && 'cp311-cp311' || 'cp312-cp312' }} &&
+        # Install specific Python development files
+        /opt/python/\${PY_VERSION}/bin/python -m pip install delvewheel &&
+        ln -s /opt/python/\${PY_VERSION}/include/python* /usr/include/ &&
+        ln -s /opt/python/\${PY_VERSION}/lib/python*/config-*-x86_64-linux-gnu/libpython*.so /usr/lib64/ &&
+        export PYTHONPATH=/opt/python/\${PY_VERSION}/lib/python3.11/site-packages &&
         /opt/python/\${PY_VERSION}/bin/pip install numpy cmake wheel setuptools build &&
         SIMPLER_WHISPER_ACCELERATION=${{ matrix.acceleration }} \
         SIMPLER_WHISPER_PLATFORM=${{ matrix.platform }} \
