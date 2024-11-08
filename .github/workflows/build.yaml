@@ -55,19 +55,27 @@ jobs:
         python setup.py build_ext --inplace
         python -m build --wheel
 
-    - name: Build wheel Ubuntu
+    - name: Build wheel for Linux
       if: matrix.os == 'ubuntu-latest'
-      env:
-        SIMPLER_WHISPER_ACCELERATION: ${{ matrix.acceleration }}
-        SIMPLER_WHISPER_PLATFORM: ${{ matrix.platform }}
-        SIMPLER_WHISPER_PYTHON_VERSION: ${{ matrix.python-version }}
       run: |
-        pip install cibuildwheel
-        python setup.py build_ext --inplace
-        cibuildwheel --output-dir dist
+        docker run --rm -v $(pwd):/io quay.io/pypa/manylinux2014_x86_64 bash -c "
+        cd /io &&
+        /opt/python/cp${{ matrix.python-version == '3.11' && '311' || '312' }}/bin/pip install numpy cmake wheel setuptools build &&
+        SIMPLER_WHISPER_ACCELERATION=${{ matrix.acceleration }} \
+        SIMPLER_WHISPER_PLATFORM=${{ matrix.platform }} \
+        SIMPLER_WHISPER_PYTHON_VERSION=${{ matrix.python-version }} \
+        /opt/python/cp${{ matrix.python-version == '3.11' && '311' || '312' }}/bin/python setup.py build_ext --inplace &&
+        /opt/python/cp${{ matrix.python-version == '3.11' && '311' || '312' }}/bin/python -m build --wheel &&
+        auditwheel repair dist/*.whl"
+  
+    - name: Install built wheel Linux
+      if: matrix.os == 'ubuntu-latest'
+      run: |
+        pip install wheelhouse/*.whl
+        echo "WHEEL_FILE=$(basename $(ls wheelhouse/*.whl))" >> $GITHUB_ENV
 
-    - name: Install built wheel Non-Windows
-      if: startsWith(matrix.os, 'windows') == false
+    - name: Install built wheel Mac
+      if: startsWith(matrix.os, 'macos') == true
       run: |
         pip install dist/*.whl
         echo "WHEEL_FILE=$(basename $(ls dist/*.whl))" >> $GITHUB_ENV
@@ -94,4 +102,6 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: ${{ env.WHEEL_FILE }}
-        path: dist/*.whl
+        path: |
+          dist/*.whl
+          wheelhouse/*.whl
