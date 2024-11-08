@@ -49,7 +49,7 @@ class CMakeBuild(build_ext):
             f"-DCMAKE_LIBRARY_OUTPUT_DIRECTORY={extdir}",
             f"-DPYTHON_EXTENSION_SUFFIX={ext_suffix}",  # Pass the extension suffix to CMake
             f"-DACCELERATION={acceleration}",
-            f"-DPYTHON_VERSION={python_version}",
+            f"-DPYBIND11_PYTHON_VERSION={python_version}",
         ]
 
         env = os.environ.copy()

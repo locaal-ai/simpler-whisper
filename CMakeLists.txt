@@ -5,10 +5,10 @@ set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Find Python
-find_package(
-  Python ${PYTHON_VERSION} EXACT
-  COMPONENTS Interpreter Development
-  REQUIRED)
+# find_package(
+#   Python ${PYTHON_VERSION} EXACT
+#   COMPONENTS Interpreter Development
+#   REQUIRED)
 
 # Fetch pybind11
 include(FetchContent)
@@ -22,8 +22,8 @@ FetchContent_MakeAvailable(pybind11)
 include(cmake/BuildWhispercpp.cmake)
 
 # Include directories
-include_directories(${Python_INCLUDE_DIRS})
-include_directories(${Python_NumPy_INCLUDE_DIRS})
+# include_directories(${Python_INCLUDE_DIRS})
+# include_directories(${Python_NumPy_INCLUDE_DIRS})
 
 # Create the extension module
 pybind11_add_module(_whisper_cpp src/whisper_wrapper.cpp)
