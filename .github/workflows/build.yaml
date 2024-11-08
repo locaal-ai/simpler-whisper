@@ -60,7 +60,7 @@ jobs:
         pip install dist/*.whl
 
         # store wheel name on github env for later use
-        echo "WHEEL_FILE=$(ls dist/*.whl)" >> $GITHUB_ENV
+        echo "WHEEL_FILE=$(basename $(ls dist/*.whl))" >> $GITHUB_ENV
 
     - name: Install built wheel Windows
       if: startsWith(matrix.os, 'windows') == true
@@ -75,7 +75,7 @@ jobs:
         pip install $wheelFile.FullName
 
         # store wheel name on github env for later use
-        echo "WHEEL_FILE=$wheelFile.FullName" >> $env:GITHUB_ENV
+        echo "WHEEL_FILE=$($wheelFile.Name)" >> $env:GITHUB_ENV
 
     - name: Test import
       if: false
