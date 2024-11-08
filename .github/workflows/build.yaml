@@ -60,6 +60,7 @@ jobs:
       run: |
         docker run --rm -v $(pwd):/io quay.io/pypa/manylinux2014_x86_64 bash -c "
         cd /io &&
+        yum install -y python3-devel &&
         PY_VERSION=${{ matrix.python-version == '3.11' && 'cp311-cp311' || 'cp312-cp312' }} &&
         /opt/python/\${PY_VERSION}/bin/pip install numpy cmake wheel setuptools build &&
         SIMPLER_WHISPER_ACCELERATION=${{ matrix.acceleration }} \
@@ -67,7 +68,7 @@ jobs:
         SIMPLER_WHISPER_PYTHON_VERSION=${{ matrix.python-version }} \
         /opt/python/\${PY_VERSION}/bin/python setup.py build_ext --inplace &&
         /opt/python/\${PY_VERSION}/bin/python -m build --wheel &&
-        auditwheel repair dist/*.whl"  
+        auditwheel repair dist/*.whl"        
         
     - name: Install built wheel Linux
       if: matrix.os == 'ubuntu-latest'
