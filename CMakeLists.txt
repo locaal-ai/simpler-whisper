@@ -14,6 +14,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 include(FetchContent)
 FetchContent_Declare(
   pybind11
+  DOWNLOAD_EXTRACT_TIMESTAMP TRUE
   GIT_REPOSITORY https://github.com/pybind/pybind11.git
   GIT_TAG v2.13.6 # Specify a version/tag here
 )
