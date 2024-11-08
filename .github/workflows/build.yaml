@@ -13,7 +13,6 @@ jobs:
       fail-fast: false
       matrix:
         os: ['windows-latest', 'macos-latest', 'ubuntu-latest']
-        python-version: ['3.11', '3.12']
         platform: ['x86_64', 'win64']
         acceleration: ['cpu', 'cuda']
         exclude:
@@ -38,59 +37,20 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
-        python-version: ${{ matrix.python-version }}
+        python-version: 3.10
 
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install numpy cmake wheel setuptools build
+        pip install numpy cmake wheel setuptools build cibuildwheel
 
-    - name: Build wheel non-Ubuntu
-      if: matrix.os != 'ubuntu-latest'
+    - name: Build wheel
       env:
         SIMPLER_WHISPER_ACCELERATION: ${{ matrix.acceleration }}
         SIMPLER_WHISPER_PLATFORM: ${{ matrix.platform }}
-        SIMPLER_WHISPER_PYTHON_VERSION: ${{ matrix.python-version }}
+        CIBW_BUILD: "cp310-* cp311-* cp312-*"
       run: |
-        python setup.py build_ext --inplace
-        python -m build --wheel
-
-    - name: Build wheel for Linux
-      if: matrix.os == 'ubuntu-latest'
-      env:
-        SIMPLER_WHISPER_ACCELERATION: ${{ matrix.acceleration }}
-        SIMPLER_WHISPER_PLATFORM: ${{ matrix.platform }}
-        SIMPLER_WHISPER_PYTHON_VERSION: ${{ matrix.python-version }}
-        CIBW_BEFORE_BUILD: python setup.py build_ext --inplace
-        CIBW_BUILD: cp311-manylinux_x86_64 cp312-manylinux_x86_64
-      run: |
-        python -m pip install cibuildwheel
         python -m cibuildwheel --output-dir wheelhouse
-
-    - name: Install built wheel Linux
-      if: matrix.os == 'ubuntu-latest'
-      run: |
-        pip install wheelhouse/*.whl
-        echo "WHEEL_FILE=$(basename $(ls wheelhouse/*.whl))" >> $GITHUB_ENV
-
-    - name: Install built wheel Mac
-      if: startsWith(matrix.os, 'macos') == true
-      run: |
-        pip install dist/*.whl
-        echo "WHEEL_FILE=$(basename $(ls dist/*.whl))" >> $GITHUB_ENV
-
-    - name: Install built wheel Windows
-      if: startsWith(matrix.os, 'windows') == true
-      shell: pwsh
-      run: |
-        $wheelFile = Get-ChildItem dist/*.whl | Select-Object -First 1
-        if (-not $wheelFile) {
-          Write-Error "No wheel file found in dist directory"
-          exit 1
-        }
-        Write-Output "Installing wheel file: $($wheelFile.FullName)"
-        pip install $wheelFile.FullName
-        echo "WHEEL_FILE=$($wheelFile.Name)" >> $env:GITHUB_ENV
 
     - name: Test import
       if: false
@@ -100,7 +60,5 @@ jobs:
     - name: Upload wheel
       uses: actions/upload-artifact@v4
       with:
-        name: ${{ env.WHEEL_FILE }}
         path: |
-          dist/*.whl
           wheelhouse/*.whl

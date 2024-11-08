@@ -5,7 +5,6 @@ import os
 import subprocess
 import platform
 import sysconfig
-from wheel.bdist_wheel import bdist_wheel
 
 
 class CMakeExtension(Extension):
@@ -40,10 +39,7 @@ class CMakeBuild(build_ext):
         # Get acceleration and platform from environment variables
         acceleration = os.environ.get("SIMPLER_WHISPER_ACCELERATION", "cpu")
         target_platform = os.environ.get("SIMPLER_WHISPER_PLATFORM", platform.machine())
-        python_version = os.environ.get(
-            "SIMPLER_WHISPER_PYTHON_VERSION",
-            f"{sys.version_info.major}.{sys.version_info.minor}",
-        )
+        python_version = f"{sys.version_info.major}.{sys.version_info.minor}"
 
         cmake_args = [
             f"-DCMAKE_LIBRARY_OUTPUT_DIRECTORY={extdir}",
@@ -102,41 +98,21 @@ class CMakeBuild(build_ext):
 
 acceleration = os.environ.get("SIMPLER_WHISPER_ACCELERATION", "")
 
-
-class CustomBdistWheel(bdist_wheel):
-    def get_tag(self):
-        python, abi, platform = super().get_tag()
-        if acceleration:
-            # Store original version
-            orig_version = self.distribution.get_version()
-            # Temporarily modify version
-            self.distribution.metadata.version = f"{orig_version}+{acceleration}"
-        return python, abi, platform
-
-
-# Make version
-pkg_version = "0.2.2"
-if platform.system() == "Windows" and acceleration:
-    pkg_version = f"{pkg_version}+{acceleration}"
-
 setup(
     name="simpler-whisper",
-    version=pkg_version,
+    version=f"0.2.2+{acceleration}",
     author="Roy Shilkrot",
     author_email="roy.shil@gmail.com",
     description="A simple Python wrapper for whisper.cpp",
     long_description=open("README.md").read(),
     long_description_content_type="text/markdown",
     ext_modules=[CMakeExtension("simpler_whisper._whisper_cpp")],
-    cmdclass={
-        "build_ext": CMakeBuild,
-        "bdist_wheel": CustomBdistWheel,
-    },
+    cmdclass={"build_ext": CMakeBuild},
     zip_safe=False,
     packages=[
         "simpler_whisper"
     ],  # Add this line to ensure the package directory is created
-    python_requires=">=3.10",
+    python_requires=">=3.11",
     install_requires=[
         "numpy",
     ],

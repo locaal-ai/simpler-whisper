@@ -4,13 +4,13 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "simpler-whisper"
-version = "0.2.2"
+dynamic = ["version"]
 authors = [
     {name = "Roy Shilkrot", email = "roy.shil@gmail.com"},
 ]
 description = "A simple Python wrapper for whisper.cpp"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
