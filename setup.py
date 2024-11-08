@@ -116,7 +116,7 @@ class CustomBdistWheel(bdist_wheel):
 
 # Make version
 pkg_version = "0.2.2"
-if acceleration:
+if platform.system() == "Windows" and acceleration:
     pkg_version = f"{pkg_version}+{acceleration}"
 
 setup(

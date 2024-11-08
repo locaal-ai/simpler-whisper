@@ -76,17 +76,7 @@ jobs:
       run: |
         python -c "import sys; sys.path.pop(0); import simpler_whisper; print(simpler_whisper.__file__)"
 
-    - name: Set wheel name
-      shell: pwsh
-      run: |
-        $wheelName = "wheel-${{ matrix.os }}-${{ matrix.platform }}-py${{ matrix.python-version }}"
-        if ("${{ matrix.acceleration }}" -ne "") {
-          $wheelName += "-${{ matrix.acceleration }}"
-        }
-        echo "WHEEL_NAME=$wheelName" >> $env:GITHUB_ENV
-
     - name: Upload wheel
       uses: actions/upload-artifact@v4
       with:
-        name: ${{ env.WHEEL_NAME }}
         path: dist/*.whl
