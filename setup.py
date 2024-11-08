@@ -100,10 +100,12 @@ class CMakeBuild(build_ext):
         )
 
 
+acceleration = os.environ.get("SIMPLER_WHISPER_ACCELERATION", "")
+
+
 class CustomBdistWheel(bdist_wheel):
     def get_tag(self):
         python, abi, platform = super().get_tag()
-        acceleration = os.environ.get("SIMPLER_WHISPER_ACCELERATION", "")
         if acceleration:
             # Store original version
             orig_version = self.distribution.get_version()
@@ -112,9 +114,14 @@ class CustomBdistWheel(bdist_wheel):
         return python, abi, platform
 
 
+# Make version
+pkg_version = "0.2.2"
+if acceleration:
+    pkg_version = f"{pkg_version}+{acceleration}"
+
 setup(
     name="simpler-whisper",
-    version="0.2.2",
+    version=pkg_version,
     author="Roy Shilkrot",
     author_email="roy.shil@gmail.com",
     description="A simple Python wrapper for whisper.cpp",
@@ -128,4 +135,11 @@ setup(
     packages=[
         "simpler_whisper"
     ],  # Add this line to ensure the package directory is created
+    python_requires=">=3.10",
+    install_requires=[
+        "numpy",
+    ],
+    package_data={
+        "simpler_whisper": ["*.dll", "*.pyd", "*.so", "*.metal"],
+    },
 )
