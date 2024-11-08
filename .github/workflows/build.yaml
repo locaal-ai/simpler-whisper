@@ -57,26 +57,13 @@ jobs:
 
     - name: Build wheel for Linux
       if: matrix.os == 'ubuntu-latest'
-      run: |
-        docker run --rm -v $(pwd):/io quay.io/pypa/manylinux2014_x86_64 bash -c "
-        cd /io &&
-        PY_VERSION=${{ matrix.python-version == '3.11' && 'cp311-cp311' || 'cp312-cp312' }} &&
-        # Set up environment variables
-        export PYTHON_ROOT=/opt/python/\${PY_VERSION} &&
-        export PATH=\$PYTHON_ROOT/bin:\$PATH &&
-        export PYTHON_INCLUDE_DIR=\$PYTHON_ROOT/include/python* &&
-        export PYTHON_LIBRARY=\$PYTHON_ROOT/lib/libpython*.so &&
-        export CMAKE_PREFIX_PATH=\$PYTHON_ROOT &&
-        # Install dependencies
-        \$PYTHON_ROOT/bin/pip install numpy cmake wheel setuptools build &&
-        # Build the wheel
-        SIMPLER_WHISPER_ACCELERATION=${{ matrix.acceleration }} \
-        SIMPLER_WHISPER_PLATFORM=${{ matrix.platform }} \
-        SIMPLER_WHISPER_PYTHON_VERSION=${{ matrix.python-version }} \
-        PYTHON_VERSION=\${PY_VERSION} \
-        \$PYTHON_ROOT/bin/python setup.py build_ext --inplace &&
-        \$PYTHON_ROOT/bin/python -m build --wheel &&
-        auditwheel repair dist/*.whl"
+      env:
+        SIMPLER_WHISPER_ACCELERATION: ${{ matrix.acceleration }}
+        SIMPLER_WHISPER_PLATFORM: ${{ matrix.platform }}
+        SIMPLER_WHISPER_PYTHON_VERSION: ${{ matrix.python-version }}
+        CIBW_BEFORE_BUILD: python setup.py build_ext --inplace
+        CIBW_BUILD: cp311-manylinux_x86_64 cp312-manylinux_x86_64
+      run: python -m cibuildwheel --output-dir wheelhouse
 
     - name: Install built wheel Linux
       if: matrix.os == 'ubuntu-latest'
