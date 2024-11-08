@@ -59,6 +59,9 @@ jobs:
       run: |
         pip install dist/*.whl
 
+        # store wheel name on github env for later use
+        echo "WHEEL_FILE=$(ls dist/*.whl)" >> $GITHUB_ENV
+
     - name: Install built wheel Windows
       if: startsWith(matrix.os, 'windows') == true
       shell: pwsh
@@ -71,6 +74,9 @@ jobs:
         Write-Output "Installing wheel file: $($wheelFile.FullName)"
         pip install $wheelFile.FullName
 
+        # store wheel name on github env for later use
+        echo "WHEEL_FILE=$wheelFile.FullName" >> $env:GITHUB_ENV
+
     - name: Test import
       if: false
       run: |
@@ -79,4 +85,5 @@ jobs:
     - name: Upload wheel
       uses: actions/upload-artifact@v4
       with:
+        name: ${{ env.WHEEL_FILE }}
         path: dist/*.whl
