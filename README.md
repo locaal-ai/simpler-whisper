@@ -74,8 +74,6 @@ Simpler Whisper supports various build configurations to optimize for different 
   - `hipblas` (for AMD GPUs)
   - `vulkan` (for cross-platform GPU acceleration)
 
-- `SIMPLER_WHISPER_PLATFORM`: Specifies the target platform. This is mainly used for macOS builds to differentiate between x86_64 and arm64 architectures.
-
 ### Example: Building for Windows with CUDA acceleration
 
 ```powershell
@@ -86,7 +84,7 @@ pip install .
 ### Example: Building for macOS ARM64
 
 ```bash
-SIMPLER_WHISPER_PLATFORM=arm64 pip install .
+pip install .
 ```
 
 ## License
