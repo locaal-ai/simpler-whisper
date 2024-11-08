@@ -125,7 +125,8 @@ setup(
     author="Roy Shilkrot",
     author_email="roy.shil@gmail.com",
     description="A simple Python wrapper for whisper.cpp",
-    long_description="A simple Python wrapper for whisper.cpp",
+    long_description=open("README.md").read(),
+    long_description_content_type="text/markdown",
     ext_modules=[CMakeExtension("simpler_whisper._whisper_cpp")],
     cmdclass={
         "build_ext": CMakeBuild,
