@@ -43,18 +43,22 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install numpy cmake wheel setuptools build cibuildwheel
+        pip install numpy cmake wheel setuptools build
 
     - name: Build wheel
       env:
         SIMPLER_WHISPER_ACCELERATION: ${{ matrix.acceleration }}
         SIMPLER_WHISPER_PLATFORM: ${{ matrix.platform }}
         SIMPLER_WHISPER_PYTHON_VERSION: ${{ matrix.python-version }}
-        CIBW_BUILD: cp${{ matrix.python-version == '3.11' && '311' || '312' }}-*
-        CIBW_SKIP: "*-musllinux_*"  # Skip musllinux builds unless you need them
       run: |
         python setup.py build_ext --inplace
-        python -m cibuildwheel --output-dir dist
+        python -m build --wheel
+
+    - name: Linux auditwheel repair
+      if: startsWith(matrix.os, 'ubuntu') == true
+      run: |
+        python -m pip install auditwheel
+        auditwheel repair dist/*.whl
 
     - name: Install built wheel Non-Windows
       if: startsWith(matrix.os, 'windows') == false
