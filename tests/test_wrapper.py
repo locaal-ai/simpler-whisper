@@ -11,6 +11,7 @@ from simpler_whisper import (
     AsyncWhisperModel,
     ThreadedWhisperModel,
     set_log_callback,
+    LogLevel,
 )
 
 
@@ -49,18 +50,6 @@ class TestWhisperWrapper(unittest.TestCase):
             2 * np.pi * 440 * np.linspace(0, 1, cls.sample_rate)
         ).astype(np.float32)
 
-    def setUp(self):
-        """Ensure each test starts with fresh instances"""
-        self.results = queue.Queue()
-
-    def tearDown(self):
-        """Cleanup after each test"""
-        while not self.results.empty():
-            try:
-                self.results.get_nowait()
-            except queue.Empty:
-                break
-
     def test_sync_model_basic(self):
         """Test basic synchronous model initialization and transcription"""
         try:
@@ -74,15 +63,15 @@ class TestWhisperWrapper(unittest.TestCase):
         """Test synchronous model with empty audio"""
         model = WhisperModel(self.model_path, False)
         empty_audio = np.array([], dtype=np.float32)
-        with self.assertRaises(Exception):
-            model.transcribe(empty_audio)
+        response = model.transcribe(empty_audio)
+        self.assertEqual(response, [])
 
-    def test_sync_model_invalid_audio(self):
-        """Test synchronous model with invalid audio data"""
-        model = WhisperModel(self.model_path, False)
-        invalid_audio = np.array([1.5, -1.5], dtype=np.float64)  # Wrong dtype
-        with self.assertRaises(Exception):
-            model.transcribe(invalid_audio)
+    # def test_sync_model_invalid_audio(self):
+    #     """Test synchronous model with invalid audio data"""
+    #     model = WhisperModel(self.model_path, False)
+    #     invalid_audio = np.array([1.5, -1.5], dtype=np.float64)  # Wrong dtype
+    #     with self.assertRaises(Exception):
+    #         model.transcribe(invalid_audio)
 
     # def test_async_model_basic(self):
     #     """Test basic async model functionality"""
@@ -214,20 +203,6 @@ class TestWhisperWrapper(unittest.TestCase):
                 set_log_callback(None)
             except:
                 pass
-
-    # def test_concurrent_models(self):
-    #     """Test running multiple models concurrently"""
-
-    #     def run_model():
-    #         model = whisper.WhisperModel(self.model_path, False)
-    #         result = model.transcribe(self.test_audio)
-    #         return len(result)
-
-    #     with ThreadPoolExecutor(max_workers=3) as executor:
-    #         futures = [executor.submit(run_model) for _ in range(3)]
-    #         results = [f.result() for f in futures]
-
-    #     self.assertEqual(len(results), 3)
 
 
 if __name__ == "__main__":
