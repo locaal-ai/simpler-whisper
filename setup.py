@@ -112,7 +112,7 @@ setup(
     },
     zip_safe=False,
     packages=["simpler_whisper"],
-    python_requires=">=3.11",
+    python_requires=">=3.10",
     install_requires=[
         "numpy",
     ],
