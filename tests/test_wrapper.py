@@ -11,10 +11,23 @@ from simpler_whisper import _whisper_cpp as whisper
 class TestWhisperWrapper(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        # Get the model path relative to the project root
-        cls.model_path = os.path.join(
+        # download the model from https://ggml.ggerganov.com/ggml-model-whisper-tiny.en-q5_1.bin
+        # and place it in the project root
+        url = "https://ggml.ggerganov.com/ggml-model-whisper-tiny.en-q5_1.bin"
+        model_path = os.path.join(
             os.path.dirname(os.path.dirname(__file__)), "ggml-tiny.en-q5_1.bin"
         )
+        if not os.path.exists(model_path):
+            import requests
+
+            print(f"Downloading model from {url}...")
+            response = requests.get(url)
+            with open(model_path, "wb") as f:
+                f.write(response.content)
+            print(f"Model downloaded to {model_path}")
+
+        # Get the model path relative to the project root
+        cls.model_path = model_path
 
         # Verify model exists
         if not os.path.exists(cls.model_path):

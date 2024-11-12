@@ -24,6 +24,11 @@ dependencies = [
     "numpy",
 ]
 
+[project.optional-dependencies]
+test = [
+    "pytest>=7.0",
+]
+
 [project.urls]
 "Homepage" = "https://github.com/locaal-ai/simpler-whisper"
 "Bug Tracker" = "https://github.com/locaal-ai/simpler-whisper/issues"
@@ -45,3 +50,4 @@ python_functions = "test_*"
 test-command = "pytest {project}/tests"
 test-extras = ["test"]
 test-skip = ["*universal2:arm64"]
+before-test = "pip install pytest"
