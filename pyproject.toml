@@ -30,6 +30,7 @@ dependencies = [
 
 [tool.setuptools]
 packages = ["simpler_whisper"]
+include-package-data = true
 
 [tool.setuptools.package-data]
 simpler_whisper = ["*.dll", "*.pyd", "*.so", "*.metal"]
@@ -39,3 +40,8 @@ testpaths = ["tests"]
 python_files = "test_*.py"
 python_classes = "Test*"
 python_functions = "test_*"
+
+[tool.cibuildwheel]
+test-command = "pytest {project}/tests"
+test-extras = ["test"]
+test-skip = ["*universal2:arm64"]
