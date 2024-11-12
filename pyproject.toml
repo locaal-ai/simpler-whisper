@@ -27,6 +27,7 @@ dependencies = [
 [project.optional-dependencies]
 test = [
     "pytest>=7.0",
+    "requests",
 ]
 
 [project.urls]
@@ -50,4 +51,4 @@ python_functions = "test_*"
 test-command = "pytest {project}/tests"
 test-extras = ["test"]
 test-skip = ["*universal2:arm64"]
-before-test = "pip install pytest"
+before-test = "pip install pytest requests"
