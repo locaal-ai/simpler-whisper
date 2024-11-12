@@ -1,7 +1,26 @@
 try:
-    from . import _whisper_cpp
-    __all__ = ['_whisper_cpp']
+    from ._whisper_cpp import *  # Import everything from _whisper_cpp first
+    from .whisper import (  # Then import our wrapper classes
+        WhisperModel,
+        AsyncWhisperModel,
+        ThreadedWhisperModel,
+        WhisperSegment,
+        WhisperToken,
+        set_log_callback,
+        LogLevel,
+    )
+
+    __all__ = [
+        "WhisperModel",
+        "AsyncWhisperModel",
+        "ThreadedWhisperModel",
+        "WhisperSegment",
+        "WhisperToken",
+        "set_log_callback",
+        "LogLevel",
+    ]
 except ImportError as e:
     import sys
-    print(f"Error importing _whisper_cpp: {e}", file=sys.stderr)
+
+    print(f"Error importing modules: {e}", file=sys.stderr)
     raise

@@ -48,7 +48,18 @@ python_classes = "Test*"
 python_functions = "test_*"
 
 [tool.cibuildwheel]
-test-command = "pytest {project}/tests"
+test-command = """
+python -c "
+import os
+import sys
+import simpler_whisper
+print('Python path:', sys.path)
+print('Working directory:', os.getcwd())
+print('Directory contents:', os.listdir())
+print('Package contents:', os.listdir('simpler_whisper') if os.path.exists('simpler_whisper') else 'No simpler_whisper dir')
+"
+pytest {project}/tests
+"""
 test-extras = ["test"]
 test-skip = ["*universal2:arm64"]
 before-test = """
