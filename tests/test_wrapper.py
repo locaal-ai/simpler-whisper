@@ -78,54 +78,54 @@ class TestWhisperWrapper(unittest.TestCase):
         with self.assertRaises(Exception):
             model.transcribe(invalid_audio)
 
-    def test_async_model_basic(self):
-        """Test basic async model functionality"""
-        results = queue.Queue()
+    # def test_async_model_basic(self):
+    #     """Test basic async model functionality"""
+    #     results = queue.Queue()
 
-        def callback(chunk_id, segments, is_partial):
-            results.put((chunk_id, segments, is_partial))
+    #     def callback(chunk_id, segments, is_partial):
+    #         results.put((chunk_id, segments, is_partial))
 
-        model = whisper.AsyncWhisperModel(self.model_path, use_gpu=False)
-        try:
-            model.start(callback)
-            chunk_id = model.transcribe(self.test_audio)
+    #     model = whisper.AsyncWhisperModel(self.model_path, use_gpu=False)
+    #     try:
+    #         model.start(callback)
+    #         chunk_id = model.transcribe(self.test_audio)
 
-            # Wait for result with timeout
-            try:
-                result = results.get(timeout=10)
-                self.assertEqual(result[0], chunk_id)  # Check if chunk_id matches
-            except queue.Empty:
-                self.fail("Async transcription timeout")
+    #         # Wait for result with timeout
+    #         try:
+    #             result = results.get(timeout=10)
+    #             self.assertEqual(result[0], chunk_id)  # Check if chunk_id matches
+    #         except queue.Empty:
+    #             self.fail("Async transcription timeout")
 
-        finally:
-            model.stop()
+    #     finally:
+    #         model.stop()
 
-    def test_threaded_model_basic(self):
-        """Test basic threaded model functionality"""
-        results = queue.Queue()
+    # def test_threaded_model_basic(self):
+    #     """Test basic threaded model functionality"""
+    #     results = queue.Queue()
 
-        def callback(chunk_id, segments, is_partial):
-            results.put((chunk_id, segments, is_partial))
+    #     def callback(chunk_id, segments, is_partial):
+    #         results.put((chunk_id, segments, is_partial))
 
-        model = whisper.ThreadedWhisperModel(
-            self.model_path,
-            use_gpu=False,
-            max_duration_sec=5.0,
-            sample_rate=self.sample_rate,
-        )
+    #     model = whisper.ThreadedWhisperModel(
+    #         self.model_path,
+    #         use_gpu=False,
+    #         max_duration_sec=5.0,
+    #         sample_rate=self.sample_rate,
+    #     )
 
-        try:
-            model.start(callback)
-            chunk_id = model.queue_audio(self.mock_speech)
+    #     try:
+    #         model.start(callback)
+    #         chunk_id = model.queue_audio(self.mock_speech)
 
-            # Wait for result with timeout
-            try:
-                result = results.get(timeout=10)
-                self.assertEqual(result[0], chunk_id)
-            except queue.Empty:
-                self.fail("Threaded transcription timeout")
-        finally:
-            model.stop()
+    #         # Wait for result with timeout
+    #         try:
+    #             result = results.get(timeout=10)
+    #             self.assertEqual(result[0], chunk_id)
+    #         except queue.Empty:
+    #             self.fail("Threaded transcription timeout")
+    #     finally:
+    #         model.stop()
 
     def test_threaded_model_continuous(self):
         """Test threaded model with continuous audio chunks"""

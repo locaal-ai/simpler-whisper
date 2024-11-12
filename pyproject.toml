@@ -51,4 +51,18 @@ python_functions = "test_*"
 test-command = "pytest {project}/tests"
 test-extras = ["test"]
 test-skip = ["*universal2:arm64"]
-before-test = "pip install pytest requests"
+before-test = """
+pip install pytest requests
+python -c "
+import os
+import requests
+model_url = 'https://ggml.ggerganov.com/ggml-model-whisper-tiny.en-q5_1.bin'
+model_path = 'ggml-tiny.en-q5_1.bin'
+if not os.path.exists(model_path):
+    print('Downloading whisper model...')
+    response = requests.get(model_url)
+    with open(model_path, 'wb') as f:
+        f.write(response.content)
+    print('Model downloaded successfully')
+"
+"""
