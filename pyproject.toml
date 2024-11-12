@@ -27,7 +27,7 @@ dependencies = [
 [project.optional-dependencies]
 test = [
     "pytest>=7.0",
-    "requests",
+    "requests>=2.0.0",
 ]
 
 [project.urls]
@@ -39,7 +39,7 @@ packages = ["simpler_whisper"]
 include-package-data = true
 
 [tool.setuptools.package-data]
-simpler_whisper = ["*.dll", "*.pyd", "*.so", "*.metal"]
+simpler_whisper = ["*.dll", "*.pyd", "*.so", "*.metal", "*.dylib"]
 
 [tool.pytest]
 testpaths = ["tests"]
@@ -48,22 +48,37 @@ python_classes = "Test*"
 python_functions = "test_*"
 
 [tool.cibuildwheel]
+# Environment variables
+environment = { PIP_PREFER_BINARY="1" }
+
+# Build configuration
+build-verbosity = 1
+
+# Test configuration
 test-command = """
 python -c "
 import os
 import sys
-import simpler_whisper
+import site
+site.addsitedir(os.path.abspath('..'))
 print('Python path:', sys.path)
 print('Working directory:', os.getcwd())
-print('Directory contents:', os.listdir())
-print('Package contents:', os.listdir('simpler_whisper') if os.path.exists('simpler_whisper') else 'No simpler_whisper dir')
+print('Directory listing:', os.listdir())
+print('Parent directory:', os.listdir('..'))
+try:
+    import simpler_whisper
+    print('simpler_whisper found at:', simpler_whisper.__file__)
+except ImportError as e:
+    print('Failed to import simpler_whisper:', e)
 "
 pytest {project}/tests
 """
+
 test-extras = ["test"]
-test-skip = ["*universal2:arm64"]
+
+# Before test configuration
 before-test = """
-pip install pytest requests
+pip install pytest requests numpy
 python -c "
 import os
 import requests
