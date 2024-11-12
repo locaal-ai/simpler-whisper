@@ -7,15 +7,18 @@ import subprocess
 import platform
 import sysconfig
 
+
 class CMakeExtension(Extension):
     def __init__(self, name, sourcedir=""):
         Extension.__init__(self, name, sources=[])
         self.sourcedir = os.path.abspath(sourcedir)
 
+
 class BuildPyCommand(build_py):
     def run(self):
-        self.run_command('build_ext')
+        self.run_command("build_ext")
         return super().run()
+
 
 class CMakeBuild(build_ext):
     def run(self):
@@ -36,7 +39,6 @@ class CMakeBuild(build_ext):
         os.makedirs(extdir, exist_ok=True)
 
         acceleration = os.environ.get("SIMPLER_WHISPER_ACCELERATION", "cpu")
-        target_platform = platform.machine()
         python_version = f"{sys.version_info.major}.{sys.version_info.minor}"
 
         cmake_args = [
@@ -50,11 +52,19 @@ class CMakeBuild(build_ext):
 
         if platform.system() == "Darwin":
             cmake_args += [
-                f"-DCMAKE_OSX_ARCHITECTURES=arm64;x86_64",
+                "-DCMAKE_OSX_ARCHITECTURES=arm64;x86_64",
+                "-DCMAKE_OSX_DEPLOYMENT_TARGET=10.13",
                 "-DCMAKE_BUILD_WITH_INSTALL_RPATH=ON",
                 "-DCMAKE_INSTALL_RPATH_USE_LINK_PATH=ON",
                 f"-DCMAKE_INSTALL_NAME_DIR=@rpath",
             ]
+            # Set environment variables for universal build
+            env["MACOSX_DEPLOYMENT_TARGET"] = "10.13"
+            env["_PYTHON_HOST_PLATFORM"] = "macosx-10.13-universal2"
+
+            # Remove any existing arch flags that might interfere
+            if "ARCHFLAGS" in env:
+                del env["ARCHFLAGS"]
             if "MACOS_ARCH" in env:
                 del env["MACOS_ARCH"]
 
@@ -84,6 +94,7 @@ class CMakeBuild(build_ext):
             ["cmake", "--build", "."] + build_args, cwd=self.build_temp
         )
 
+
 acceleration = os.environ.get("SIMPLER_WHISPER_ACCELERATION", "")
 
 setup(
@@ -106,6 +117,6 @@ setup(
         "numpy",
     ],
     package_data={
-        "simpler_whisper": ["*.dll", "*.pyd", "*.so", "*.metal"],
+        "simpler_whisper": ["*.dll", "*.pyd", "*.so", "*.metal", "*.bin", "*.dylib"],
     },
 )
