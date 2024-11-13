@@ -31,6 +31,7 @@ if(APPLE)
     # Use unique names for each architecture's fetch
     FetchContent_Declare(
       whispercpp_fetch_${MACOS_ARCH}
+      DOWNLOAD_EXTRACT_TIMESTAMP TRUE
       URL ${WHISPER_CPP_URL}
       URL_HASH SHA256=${WHISPER_CPP_HASH})
     FetchContent_MakeAvailable(whispercpp_fetch_${MACOS_ARCH})

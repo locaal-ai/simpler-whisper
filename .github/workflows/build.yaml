@@ -42,6 +42,7 @@ jobs:
         CIBW_ARCHS_MACOS: "universal2"
         CIBW_ARCHS_WINDOWS: "AMD64"
         CIBW_ARCHS_LINUX: "x86_64"
+        CIBW_SKIP: "cp3?-musllinux_*"
         CIBW_BUILD_VERBOSITY: 1
       run: |
         python -m cibuildwheel --output-dir wheelhouse
@@ -54,6 +55,6 @@ jobs:
     - name: Upload wheel
       uses: actions/upload-artifact@v4
       with:
-        name: wheels-${{ matrix.os }}
+        name: wheels-${{ matrix.os }}-${{ matrix.acceleration }}
         path: |
           wheelhouse/*.whl
