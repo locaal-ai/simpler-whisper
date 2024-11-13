@@ -173,6 +173,7 @@ elseif(WIN32)
 
   # glob all dlls in the bin directory and install them
   file(GLOB WHISPER_ADDITIONAL_FILES ${whispercpp_fetch_SOURCE_DIR}/bin/*.dll)
+  list(FILTER WHISPER_ADDITIONAL_FILES EXCLUDE REGEX "^.*/cu.*\\.dll$")
 else()
   if(${CMAKE_BUILD_TYPE} STREQUAL Release OR ${CMAKE_BUILD_TYPE} STREQUAL
                                              RelWithDebInfo)
