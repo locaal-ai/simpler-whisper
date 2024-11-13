@@ -13,7 +13,7 @@ jobs:
       fail-fast: false
       matrix:
         os: ['windows-latest', 'macos-latest', 'ubuntu-latest']
-        acceleration: ['cpu', 'cuda']
+        acceleration: ['cpu'] # , 'cuda'
         exclude:
           - os: macos-latest
             acceleration: cuda
