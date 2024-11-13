@@ -95,11 +95,11 @@ class CMakeBuild(build_ext):
         )
 
 
-acceleration = os.environ.get("SIMPLER_WHISPER_ACCELERATION", "")
+acceleration = os.environ.get("SIMPLER_WHISPER_ACCELERATION", "cpu")
 
 setup(
     name="simpler-whisper",
-    version=f"0.2.2+{acceleration}",
+    version=f"0.2.4+{acceleration}",
     author="Roy Shilkrot",
     author_email="roy.shil@gmail.com",
     description="A simple Python wrapper for whisper.cpp",
