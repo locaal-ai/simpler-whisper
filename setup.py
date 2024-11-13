@@ -95,12 +95,9 @@ class CMakeBuild(build_ext):
         )
 
 
-acceleration = os.environ.get("SIMPLER_WHISPER_ACCELERATION", "cpu")
-acceleration_tag = "" if acceleration == "cpu" else f".post1"
-
 setup(
     name="simpler-whisper",
-    version=f"0.2.4{acceleration_tag}",
+    version=f"0.2.4.post1",
     author="Roy Shilkrot",
     author_email="roy.shil@gmail.com",
     description="A simple Python wrapper for whisper.cpp",
