@@ -1,6 +1,10 @@
 try:
-    from ._whisper_cpp import *  # Import everything from _whisper_cpp first
-    from .whisper import (  # Then import our wrapper classes
+    from ._whisper_cpp import *
+except ImportError as e:
+    import sys
+    print(f"Error importing modules: {e}", file=sys.stderr)
+try:
+    from .whisper import (
         WhisperModel,
         AsyncWhisperModel,
         ThreadedWhisperModel,
@@ -23,4 +27,4 @@ except ImportError as e:
     import sys
 
     print(f"Error importing modules: {e}", file=sys.stderr)
-    raise
+    __all__ = []

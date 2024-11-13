@@ -39,13 +39,11 @@ class CMakeBuild(build_ext):
         os.makedirs(extdir, exist_ok=True)
 
         acceleration = os.environ.get("SIMPLER_WHISPER_ACCELERATION", "cpu")
-        python_version = f"{sys.version_info.major}.{sys.version_info.minor}"
 
         cmake_args = [
             f"-DCMAKE_LIBRARY_OUTPUT_DIRECTORY={extdir}",
             f"-DPYTHON_EXTENSION_SUFFIX={ext_suffix}",
             f"-DACCELERATION={acceleration}",
-            f"-DPYBIND11_PYTHON_VERSION={python_version}",
         ]
 
         env = os.environ.copy()
@@ -117,4 +115,5 @@ setup(
     package_data={
         "simpler_whisper": ["*.dll", "*.pyd", "*.so", "*.metal", "*.bin", "*.dylib"],
     },
+    include_package_data=True,
 )

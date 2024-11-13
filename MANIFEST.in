@@ -1,5 +1,5 @@
-recursive-include simpler_whisper *.so
-recursive-include simpler_whisper *.pyd
-recursive-include simpler_whisper *.dll
-recursive-include simpler_whisper *.py
-recursive-include simpler_whisper *.metal
+include simpler_whisper/*.so
+include simpler_whisper/*.pyd
+include simpler_whisper/*.dll
+include simpler_whisper/*.py
+include simpler_whisper/*.metal
