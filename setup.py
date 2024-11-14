@@ -113,7 +113,7 @@ setup(
         "numpy",
     ],
     package_data={
-        "simpler_whisper": ["*.dll", "*.pyd", "*.so", "*.metal", "*.bin", "*.dylib"],
+        "simpler_whisper": ["./*.dll", "./*.pyd", "./*.so", "./*.metal", "./*.bin", "./*.dylib"],
     },
     include_package_data=True,
 )

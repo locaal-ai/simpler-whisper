@@ -203,6 +203,12 @@ public:
      */
     size_t transcribe(py::array_t<float> audio)
     {
+        // Check if input is empty
+        if (audio.is_none() || audio.size() == 0)
+        {
+            return 0;
+        }
+
         return this->queueAudio(audio);
     }
 

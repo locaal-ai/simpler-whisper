@@ -37,10 +37,6 @@ test = [
 
 [tool.setuptools]
 packages = ["simpler_whisper"]
-include-package-data = true
-
-[tool.setuptools.package-data]
-simpler_whisper = ["*.dll", "*.pyd", "*.so", "*.metal", "*.dylib"]
 
 [tool.pytest]
 testpaths = ["tests"]
