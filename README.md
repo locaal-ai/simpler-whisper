@@ -26,22 +26,79 @@ pip install simpler-whisper
 
 ## Usage
 
+There are three ways to use simpler-whisper:
+
+### 1. Basic Usage
 ```python
-import simpler_whisper.whisper
-import numpy as np
+from simpler_whisper.whisper import WhisperModel
 
-# Load the model file.
-# It's on you to download one from https://huggingface.co/ggerganov/whisper.cpp
-model = simpler_whisper.whisper.load_model("path/to/model.bin")
+# Load the model (models can be downloaded from https://huggingface.co/ggerganov/whisper.cpp)
+model = WhisperModel("path/to/model.bin", use_gpu=True)
 
-# Load your 16kHz mono audio samples as a numpy array of float32
-# It's on you if you need to convert (use av) or resample (use resampy)
-audio = np.frombuffer(open("path/to/audio.raw", "rb").read(), dtype=np.float32)
+# Load and prepare your audio
+# You can use av, librosa, or any method that gives you 16kHz mono float32 samples
+import av
+container = av.open("audio.mp3")
+audio_stream = container.streams.audio[0]
+samples = np.concatenate([
+    frame.to_ndarray().mean(axis=0) if frame.format.channels == 2 else frame.to_ndarray()
+    for frame in container.decode(audio_stream)
+])
 
 # Transcribe
-transcription = model.transcribe(audio)
+transcription = model.transcribe(samples)
+for segment in transcription:
+    print(f"{segment.text} ({segment.t0:.2f}s - {segment.t1:.2f}s)")
+```
 
-print(transcription)
+### 2. Async Processing
+
+This will create a thread in the backend (not locked by the GIL) to allow for asynchronous transcription.
+
+```python
+from simpler_whisper.whisper import AsyncWhisperModel
+
+def handle_result(chunk_id: int, segments: List[WhisperSegment], is_partial: bool):
+    text = " ".join([seg.text for seg in segments])
+    print(f"Chunk {chunk_id}: {text}")
+
+# Create and start async model
+model = AsyncWhisperModel("path/to/model.bin", callback=handle_result, use_gpu=True)
+model.start()
+
+# Queue audio chunks for processing
+chunk_id = model.transcribe(audio_samples)
+
+# When done
+model.stop()
+```
+
+### 3. Real-time Threaded Processing
+
+This method creates a background thread for real-time transcription that will continuously
+process the input in e.g. 10 seconds chunks and report on both final or partial results.
+
+```python
+from simpler_whisper.whisper import ThreadedWhisperModel
+
+def handle_result(chunk_id: int, segments: List[WhisperSegment], is_partial: bool):
+    text = " ".join([seg.text for seg in segments])
+    print(f"Chunk {chunk_id}: {text}")
+
+# Create and start threaded model with 10-second chunks
+model = ThreadedWhisperModel(
+    "path/to/model.bin",
+    callback=handle_result,
+    use_gpu=True,
+    max_duration_sec=10.0
+)
+model.start()
+
+# Queue audio chunks as they arrive
+chunk_id = model.queue_audio(audio_samples)
+
+# When done
+model.stop()
 ```
 
 ## Platform-specific notes
