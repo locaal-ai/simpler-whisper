@@ -39,7 +39,7 @@ jobs:
       id: get_tag
       run: |
         git fetch --tags
-        echo "tag=$(git describe --tags --abbrev=1)" >> $GITHUB_OUTPUT
+        echo "tag=$(git describe --tags --abbrev=1 --all)" >> $GITHUB_OUTPUT
       shell: bash
 
     - name: Build wheel
