@@ -44,6 +44,7 @@ jobs:
         CIBW_ARCHS_LINUX: "x86_64"
         CIBW_SKIP: "*-musllinux_*"
         CIBW_BUILD_VERBOSITY: 1
+        SIMPLER_WHISPER_VERSION: ${{ github.ref_name }}
       run: |
         python -m cibuildwheel --output-dir wheelhouse
 

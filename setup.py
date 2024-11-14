@@ -1,3 +1,4 @@
+import shutil
 from setuptools import setup, Extension
 from setuptools.command.build_ext import build_ext
 from setuptools.command.build_py import build_py
@@ -84,7 +85,13 @@ class CMakeBuild(build_ext):
 
         if not os.path.exists(self.build_temp):
             os.makedirs(self.build_temp)
+        else:
+            # Remove the existing CMakeCache.txt to ensure a clean build
+            cache_file = os.path.join(self.build_temp, "CMakeCache.txt")
+            if os.path.exists(cache_file):
+                os.remove(cache_file)
 
+        # Configure and build the extension
         subprocess.check_call(
             ["cmake", ext.sourcedir] + cmake_args, cwd=self.build_temp, env=env
         )
@@ -93,9 +100,25 @@ class CMakeBuild(build_ext):
         )
 
 
+def get_latest_git_tag():
+    tag = os.environ.get("SIMPLER_WHISPER_VERSION")
+    if tag:
+        return tag
+    try:
+        tag = subprocess.check_output(
+            ["git", "describe", "--tags"], encoding="utf-8"
+        ).strip()
+        parts = tag.split("-")
+        if len(parts) == 3:
+            return f"{parts[0]}-dev{parts[1]}"
+        return tag
+    except subprocess.CalledProcessError:
+        return "0.0.0-dev"
+
+
 setup(
     name="simpler-whisper",
-    version=f"0.2.4.post1",
+    version=get_latest_git_tag(),
     author="Roy Shilkrot",
     author_email="roy.shil@gmail.com",
     description="A simple Python wrapper for whisper.cpp",
@@ -113,7 +136,14 @@ setup(
         "numpy",
     ],
     package_data={
-        "simpler_whisper": ["./*.dll", "./*.pyd", "./*.so", "./*.metal", "./*.bin", "./*.dylib"],
+        "simpler_whisper": [
+            "./*.dll",
+            "./*.pyd",
+            "./*.so",
+            "./*.metal",
+            "./*.bin",
+            "./*.dylib",
+        ],
     },
     include_package_data=True,
 )
