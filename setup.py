@@ -45,6 +45,7 @@ class CMakeBuild(build_ext):
             f"-DCMAKE_LIBRARY_OUTPUT_DIRECTORY={extdir}",
             f"-DPYTHON_EXTENSION_SUFFIX={ext_suffix}",
             f"-DACCELERATION={acceleration}",
+            f"-DPYTHON_EXECUTABLE={sys.executable}",
         ]
 
         env = os.environ.copy()
