@@ -35,6 +35,12 @@ jobs:
         python -m pip install --upgrade pip
         pip install numpy cmake wheel setuptools build cibuildwheel
 
+    - name: Get latest tag
+      id: get_tag
+      run: |
+        echo "tag=$(git describe --tags --abbrev=1)" >> $GITHUB_OUTPUT
+      shell: bash
+
     - name: Build wheel
       env:
         CIBW_ENVIRONMENT: "SIMPLER_WHISPER_ACCELERATION='${{ matrix.acceleration }}' MAOSX_DEPLOYMENT_TARGET=10.13"
@@ -44,7 +50,7 @@ jobs:
         CIBW_ARCHS_LINUX: "x86_64"
         CIBW_SKIP: "*-musllinux_*"
         CIBW_BUILD_VERBOSITY: 1
-        SIMPLER_WHISPER_VERSION: ${{ github.ref_name }}
+        SIMPLER_WHISPER_VERSION: ${{ steps.get_tag.outputs.tag }}
       run: |
         python -m cibuildwheel --output-dir wheelhouse
 

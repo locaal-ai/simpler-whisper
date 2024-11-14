@@ -102,18 +102,17 @@ class CMakeBuild(build_ext):
 
 def get_latest_git_tag():
     tag = os.environ.get("SIMPLER_WHISPER_VERSION")
-    if tag:
-        return tag
-    try:
-        tag = subprocess.check_output(
-            ["git", "describe", "--tags"], encoding="utf-8"
-        ).strip()
-        parts = tag.split("-")
-        if len(parts) == 3:
-            return f"{parts[0]}-dev{parts[1]}"
-        return tag
-    except subprocess.CalledProcessError:
-        return "0.0.0-dev"
+    if not tag:
+        try:
+            tag = subprocess.check_output(
+                ["git", "describe", "--tags"], encoding="utf-8"
+            ).strip()
+        except subprocess.CalledProcessError:
+            return "0.0.0-dev"
+    parts = tag.split("-")
+    if len(parts) == 3:
+        return f"{parts[0]}-dev{parts[1]}"
+    return tag
 
 
 setup(
